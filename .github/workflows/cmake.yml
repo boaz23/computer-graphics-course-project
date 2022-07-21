@@ -1,0 +1,112 @@
+name: CMake
+
+on:
+  workflow_run:
+    branches: [ master ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Debug
+
+jobs:
+  Windows:
+    name: Windows
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: windows-2022
+    env:
+      CC: cl.exe
+      CXX: cl.exe
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set env
+      run: |
+        echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> ${env:GITHUB_ENV}
+        echo "appdata=$env:LOCALAPPDATA" >> ${env:GITHUB_ENV}
+
+    - name: Cache build
+      id: cache-build
+      uses: actions/cache@v1
+      with:
+        path: ${{ env.appdata }}\Mozilla\sccache
+        key: ${{ runner.os }}-${{ matrix.config }}-${{ matrix.static }}-cache
+
+    - name: Prepare sccache
+      run: |
+        Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
+        scoop install sccache --global
+        # Scoop modifies the PATH so we make it available for the next steps of the job
+        echo "${env:PATH}" >> ${env:GITHUB_PATH}
+    
+    - name: Configure and build
+      shell: cmd
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64
+        cmake -G Ninja ^
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ^
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} ^
+          -B build ^
+          -S .
+        cmake --build build
+
+      
+  macos:
+    name: macos
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Dependencies
+      run: |
+        brew update
+        brew install boost gmp mpfr ccache
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: |
+        cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -B ${{github.workspace}}/build
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --target Mbrot_bin -- -j 6
+
+  linux:
+    name: linux
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Dependencies
+      run: |
+            sudo apt-get update
+            sudo apt-get install \
+              libblas-dev \
+              libboost-filesystem-dev \
+              libboost-system-dev \
+              libboost-thread-dev \
+              libglu1-mesa-dev \
+              liblapack-dev \
+              libmpfr-dev \
+              xorg-dev \
+              ccache
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: |
+        cmake -G "CodeBlocks - Unix Makefiles" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -B ${{github.workspace}}/build
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --target Mbrot_bin -- -j 6
+
+
