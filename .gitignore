@@ -1,5 +1,6 @@
-# Directories
-build
+/build/*
+/external
+/out
+!/build/shaders
+/.vs
 external
-
-# Files
