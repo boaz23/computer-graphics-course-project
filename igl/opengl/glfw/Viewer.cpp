@@ -630,8 +630,8 @@ IGL_INLINE bool
         Eigen::Matrix4d scnMat = Eigen::Matrix4d::Identity();
         if (selected_data_index <= 0 && !(staticScene & (1 << viewportIndx)))
             scnMat = MakeTransd().inverse();
-        else if(!(staticScene & (1 << viewportIndx)))
-            scnMat = (MakeTransd() * GetPriviousTrans(Eigen::Matrix4d::Identity(),selected_data_index )).inverse();
+        else if (!(staticScene & (1 << viewportIndx)))
+            scnMat = (MakeTransd() * GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index));
         else if(selected_data_index > 0)
             scnMat = (GetPriviousTrans(Eigen::Matrix4d::Identity(),selected_data_index )).inverse();
 
@@ -640,7 +640,7 @@ IGL_INLINE bool
             for (int pShape : pShapes)
             {
                 selected_data_index = pShape;
-                WhenTranslate(scnMat * cameraMat, -xrel / movCoeff, yrel / movCoeff);
+                WhenTranslate(cameraMat * scnMat, -xrel / movCoeff, yrel / movCoeff);
             }
         }
         else
@@ -801,7 +801,7 @@ IGL_INLINE bool
             return (float)tmp.z();
         }
         else
-            return 0;
+            return -1;
     }
 
     int Viewer::AddTexture(const std::string& textureFileName, int dim)

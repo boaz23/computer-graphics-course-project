@@ -9,28 +9,37 @@
 	{	
 		if (action == GLFW_PRESS)
 		{
+			int state = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
 			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 			Project* scn = (Project*)rndr->GetScene();
 			double x2, y2;
-			
 			glfwGetCursorPos(window, &x2, &y2);
 			rndr->UpdatePress(x2, y2);
-			if (rndr->Picking((int)x2, (int)y2))
-			{
-				rndr->UpdatePosition(x2, y2);
-				if(button == GLFW_MOUSE_BUTTON_LEFT)
-					rndr->Pressed();
-			}
-			else
-			{
-				rndr->UnPick(2);
-			}
-		
+			if (state != GLFW_PRESS && !rndr->IsMany()) {
+				if (rndr->Picking((int)x2, (int)y2))
+				{
+					rndr->UpdatePosition(x2, y2);
+					if (button == GLFW_MOUSE_BUTTON_LEFT)
+						rndr->Pressed();
+				}
+				else
+				{
+					rndr->UnPick(2);
+				}
+			}		
 		}
 		else
 		{
 			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
-			rndr->UnPick(2);
+			int state = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+			if (state == GLFW_PRESS) {
+				rndr->PickMany(0);
+				if (!rndr->IsPicked())
+				{
+					rndr->UnPick(2);
+				}
+			}
+			//rndr->UnPick(2);
 		}
 	}
 	
@@ -60,19 +69,22 @@
 
 		if (rndr->CheckViewport(xpos,ypos, 0))
 		{
-			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+			int state = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+			if (state != GLFW_PRESS)
 			{
+				if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+				{
 
-				rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT);
-			}
-			else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-			{
-				
-				rndr->MouseProccessing(GLFW_MOUSE_BUTTON_LEFT);
-			}
-			else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_RELEASE && rndr->IsPicked() && rndr->IsMany())
 					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT);
+				}
+				else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+				{
 
+					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_LEFT);
+				}
+				//else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_RELEASE && rndr->IsPicked() && rndr->IsMany())
+				//	rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT);
+			}
 		}
 	}
 
@@ -94,9 +106,8 @@
 			switch (key)
 			{
 			case GLFW_KEY_ESCAPE:
-				glfwSetWindowShouldClose(window, GLFW_TRUE);
+				rndr->UnPick(2);
 				break;
-				
 			case GLFW_KEY_SPACE:
 				if (scn->IsActive())
 					scn->Deactivate();
