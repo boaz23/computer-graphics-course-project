@@ -26,60 +26,57 @@ void Project::Init()
 	unsigned int texIDs[3] = { 0 , 1, 2};
 	unsigned int slots[3] = { 0 , 1, 2 };
 	
-	AddShader("shaders/pickingShader");
-	AddShader("shaders/cubemapShader");
-	AddShader("shaders/basicShaderTex");
-	AddShader("shaders/basicShader");
+	int shaderIndex_picking = AddShader("shaders/pickingShader");
+	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
+	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
+	int shaderIndex_basic = AddShader("shaders/basicShader");
 	
-	AddTexture("textures/plane.png",2);
-	AddTexture("textures/cubemaps/Daylight Box_", 3);
-	AddTexture("textures/grass.bmp", 2);
-	//AddTexture("../res/textures/Cat_bump.jpg", 2);
+	int textureIndex_plane = AddTexture("textures/plane.png",2);
+	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box_", 3);
+	int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
 
-	AddMaterial(texIDs,slots, 1);
-	AddMaterial(texIDs+1, slots+1, 1);
-	AddMaterial(texIDs + 2, slots + 2, 1);
+	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
+	int materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
+	int materialIndex_2 = AddMaterial(texIDs + 2, slots + 2, 1);
 	
-	AddShape(Cube, -2, TRIANGLES);
-	AddShape(zCylinder, -1, TRIANGLES);
-	AddShape(zCylinder, 1, TRIANGLES);
-	AddShape(zCylinder, 2, TRIANGLES);
-	AddShape(Axis, -1, LINES);
-	//AddShapeFromFile("../res/objs/Cat_v1.obj", -1, TRIANGLES);
+	int shapeIndex_cube = AddShape(Cube, -2, TRIANGLES);
+	int shapeIndex_zCylinder0 = AddShape(zCylinder, -1, TRIANGLES);
+	int shapeIndex_zCylinder1 = AddShape(zCylinder, 1, TRIANGLES);
+	int shapeIndex_zCylinder2 = AddShape(zCylinder, 2, TRIANGLES);
+	int shapeIndex_axis = AddShape(Axis, -1, LINES);
 	
-	SetShapeShader(1, 2);
-	SetShapeShader(2, 2);
-	SetShapeShader(3, 2);
-	SetShapeShader(4, 2);
+	SetShapeShader(shapeIndex_zCylinder0, shaderIndex_basicTex);
+	SetShapeShader(shapeIndex_zCylinder1, shaderIndex_basicTex);
+	SetShapeShader(shapeIndex_zCylinder2, shaderIndex_basicTex);
+	SetShapeShader(shapeIndex_axis, shaderIndex_basicTex);
 
 
-	SetShapeMaterial(1, 0);
-	SetShapeMaterial(2, 0);	
-	SetShapeMaterial(3, 0);	
-	SetShapeMaterial(4, 0);
+	SetShapeMaterial(shapeIndex_zCylinder0, materialIndex_basic);
+	SetShapeMaterial(shapeIndex_zCylinder1, materialIndex_basic);
+	SetShapeMaterial(shapeIndex_zCylinder2, materialIndex_basic);
+	SetShapeMaterial(shapeIndex_axis, materialIndex_basic);
 
-	SetShapeMaterial(0, 1);
+	SetShapeMaterial(shapeIndex_cube, materialIndex_cube);
 
 
-	selected_data_index = 0;
+	selected_data_index = shapeIndex_cube;
 	float cylinderLen = 1.6f;
 	float s = 60;
-	ShapeTransformation(scaleAll, s,0);
-	selected_data_index = 1;
+	ShapeTransformation(scaleAll, s, 0);
+	selected_data_index = shapeIndex_zCylinder0;
 	data()->SetCenterOfRotation(Eigen::Vector3d(0, 0, -cylinderLen / 2.0));
 	ShapeTransformation(zTranslate, cylinderLen / 2.0, 1);
 	
-	selected_data_index = 2;
+	selected_data_index = shapeIndex_zCylinder1;
 	ShapeTransformation(zTranslate, cylinderLen , 1);
 	data()->SetCenterOfRotation(Eigen::Vector3d(0, 0, -cylinderLen / 2.0));
 	
-	selected_data_index = 3;
+	selected_data_index = shapeIndex_zCylinder2;
 	ShapeTransformation(zTranslate, cylinderLen, 1);
 	data()->SetCenterOfRotation(Eigen::Vector3d(0, 0, -cylinderLen / 2.0));
 
-	selected_data_index = 0;
-	SetShapeStatic(0);
-
+	selected_data_index = shapeIndex_cube;
+	SetShapeStatic(shapeIndex_cube);
 
 	//SetShapeViewport(6, 1);
 //	ReadPixel(); //uncomment when you are reading from the z-buffer
@@ -99,7 +96,7 @@ void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, c
 	s->SetUniformMat4f("Model", Model);
 	if (data_list[shapeIndx]->GetMaterial() >= 0 && !materials.empty())
 	{
-//		materials[shapes[pickedShape]->GetMaterial()]->Bind(textures);
+//		materials[shapes[selected_data_index]->GetMaterial()]->Bind(textures);
 		BindMaterial(s, data_list[shapeIndx]->GetMaterial());
 	}
 	if (shaderIndx == 0)
@@ -111,7 +108,7 @@ void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, c
 	
 	
 
-	//s->SetUniform1i("sampler2", materials[shapes[pickedShape]->GetMaterial()]->GetSlot(1));
+	//s->SetUniform1i("sampler2", materials[shapes[selected_data_index]->GetMaterial()]->GetSlot(1));
 	//s->SetUniform4f("lightDirection", 0.0f , 0.0f, -1.0f, 0.0f);
 //	if(shaderIndx == 0)
 //		s->SetUniform4f("lightColor",r/255.0f, g/255.0f, b/255.0f,1.0f);
