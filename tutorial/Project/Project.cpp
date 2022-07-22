@@ -78,7 +78,6 @@ void Project::Init()
 	selected_data_index = shapeIndex_cube;
 	SetShapeStatic(shapeIndex_cube);
 
-
 	//SetShapeViewport(6, 1);
 //	ReadPixel(); //uncomment when you are reading from the z-buffer
 }
