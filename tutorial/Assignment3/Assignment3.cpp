@@ -17,7 +17,7 @@ Assignment3::Assignment3()
 {
 }
 
-//Assignment3::Assignment3(float angle ,float relationWH, float near, float far) : Scene(angle,relationWH,near,far)
+//Assignment3::Assignment3(float angle ,float relationWH, float zNear, float zFar) : Scene(angle,relationWH,zNear,zFar)
 //{ 	
 //}
 

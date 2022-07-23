@@ -16,7 +16,7 @@ public:
 	size_t selectedCameraIndex;
 
 	Project();
-//	Project(float angle,float relationWH,float near, float far);
+//	Project(float angle,float relationWH,float zNear, float zFar);
 	void Init();
 	void Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx);
 	void WhenRotate();

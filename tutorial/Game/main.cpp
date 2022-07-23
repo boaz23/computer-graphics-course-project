@@ -16,12 +16,13 @@ int main(int argc,char *argv[])
 	y.push_back(DISPLAY_HEIGHT);
     Display disp = Display(DISPLAY_WIDTH, DISPLAY_HEIGHT, "OPENGL");
     igl::opengl::glfw::imgui::ImGuiMenu* menu = new igl::opengl::glfw::imgui::ImGuiMenu();
-    Renderer* rndr = new Renderer(CAMERA_ANGLE, (float)DISPLAY_WIDTH/(float)DISPLAY_HEIGHT/2, NEAR, FAR);
+	igl::opengl::CameraData cameraData(CAMERA_ANGLE, (float)DISPLAY_WIDTH / (float)DISPLAY_HEIGHT, NEAR, FAR);
+    Renderer* rndr = new Renderer(cameraData);
 	Game *scn = new Game();  //initializing scene
 	
     Init(disp,menu); //adding callback functions
 	scn->Init();    //adding shaders, textures, shapes to scene
-    rndr->Init(scn,x,y,1,menu); // adding scene and viewports to the renderer
+    rndr->Init(scn,x,y,cameraData,1,menu); // adding scene and viewports to the renderer
 	rndr->SetBuffers();
 	disp.SetRenderer(rndr);
 	

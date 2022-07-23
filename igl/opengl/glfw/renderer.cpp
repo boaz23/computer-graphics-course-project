@@ -12,7 +12,7 @@
 #endif
 
 
-Renderer::Renderer(float angle, float relationWH, float near, float far)
+Renderer::Renderer(igl::opengl::CameraData cameraData)
 {
 
     callback_init = nullptr;
@@ -35,7 +35,7 @@ Renderer::Renderer(float angle, float relationWH, float near, float far)
     callback_key_down_data = nullptr;
     callback_key_up_data = nullptr;
     glLineWidth(5);
-    cameras.push_back(new igl::opengl::Camera(angle, relationWH, near, far));
+    cameras.push_back(new igl::opengl::Camera(cameraData));
     isPressed = false;
     isMany = false;
     xold = 0;
@@ -214,13 +214,13 @@ void Renderer::UpdatePress(float xpos, float ypos)
     yWhenPress = ypos;
 }
 
-void Renderer::AddCamera(const Eigen::Vector3d& pos, float fov, float relationWH, float zNear, float zFar, int infoIndx)
+void Renderer::AddCamera(const Eigen::Vector3d& pos, igl::opengl::CameraData cameraData, int infoIndx)
 {
     if (infoIndx > 0 && infoIndx < drawInfos.size())
     {
         drawInfos[infoIndx]->SetCamera(cameras.size());
     }
-    cameras.push_back(new igl::opengl::Camera(fov, relationWH, zNear, zFar));
+    cameras.push_back(new igl::opengl::Camera(cameraData));
     cameras.back()->MyTranslate(pos, false);
 }
 
@@ -471,13 +471,13 @@ int Renderer::Create2Dmaterial(int infoIndx, int code)
 
 void Renderer::SetBuffers()
 {
-    AddCamera(Eigen::Vector3d(0, 0, 1), 0, 1, 1, 10,2);
+    AddCamera(Eigen::Vector3d(0, 0, 1), igl::opengl::CameraData(0, 1, 1, 10), 2);
     int materialIndx = Create2Dmaterial(1,1);
     scn->SetShapeMaterial(6, materialIndx);
     SwapDrawInfo(2, 3);
 }
 
-IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, std::list<int>xViewport, std::list<int>yViewport,int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu)
+IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, std::list<int>xViewport, std::list<int>yViewport, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu)
 {
     scn = scene;
     menu = _menu;
@@ -524,7 +524,7 @@ IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, std::list<int>x
         {
             // Draw parent menu content
             auto temp = Eigen::Vector4i(0,0,0,0); // set imgui to min size and top left corner
-            menu->draw_viewer_menu(scn,cameras,temp, drawInfos);
+            menu->draw_viewer_menu(this, scn,cameras, cameraData, temp, drawInfos);
         };
     }
 }

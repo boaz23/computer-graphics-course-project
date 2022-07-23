@@ -9,15 +9,14 @@ int main(int argc,char *argv[])
 	y.push_back(DISPLAY_HEIGHT);
     Display disp = Display(DISPLAY_WIDTH, DISPLAY_HEIGHT, "OPENGL");
     igl::opengl::glfw::imgui::ImGuiMenu* menu = new igl::opengl::glfw::imgui::ImGuiMenu();
-    Renderer* rndr = new Renderer(CAMERA_ANGLE, DISPLAY_RATIO, NEAR, FAR);
+	igl::opengl::CameraData cameraData(CAMERA_ANGLE, DISPLAY_RATIO, NEAR, FAR);
+    Renderer* rndr = new Renderer(cameraData);
 	Project *scn = new Project();  //initializing scene
 	
     Init(disp,menu); //adding callback functions
 	scn->Init();    //adding shaders, textures, shapes to scene
-    rndr->Init(scn,x,y,1,menu); // adding scene and viewports to the renderer
+    rndr->Init(scn,x,y,cameraData,1,menu); // adding scene and viewports to the renderer
     disp.SetRenderer(rndr);
-
-	rndr->AddCamera(Eigen::Vector3d(0, 2, 10), CAMERA_ANGLE, DISPLAY_RATIO, NEAR, FAR);
 
     disp.launch_rendering(rndr);
 

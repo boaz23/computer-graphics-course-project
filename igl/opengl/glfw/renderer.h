@@ -1,4 +1,7 @@
 #pragma once
+#ifndef IGL_OPENGL_GLFW_RENDERER_H
+#define IGL_OPENGL_GLFW_RENDERER_H
+
 #include <igl/igl_inline.h>
 #include <vector>
 #include <functional>
@@ -19,7 +22,7 @@ struct GLFWwindow;
 class Renderer 
 {
 public:
-    Renderer(float angle, float relationWH, float near, float far);
+    Renderer(igl::opengl::CameraData cameraData);
 
     enum buffersMode {
         COLOR, DEPTH, STENCIL, BACK, FRONT, NONE
@@ -113,7 +116,7 @@ public:
 
     void UpdatePress(float xpos, float ypos);
 
-    void AddCamera(const Eigen::Vector3d &pos, float fov, float relationWH, float zNear, float zFar,
+    void AddCamera(const Eigen::Vector3d &pos, igl::opengl::CameraData cameraData,
                    int infoIndx = -1);
 
     void AddViewport(int left, int bottom, int width, int height);
@@ -183,7 +186,7 @@ public:
     }
     inline bool IsPicked() { return isPicked; }
     inline bool IsMany() const { return isMany; }
-    void Init(igl::opengl::glfw::Viewer *scene, std::list<int> xViewport, std::list<int> yViewport, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
+    void Init(igl::opengl::glfw::Viewer *scene, std::list<int> xViewport, std::list<int> yViewport, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
 
 
 private:
@@ -220,4 +223,4 @@ private:
 
     void SwapDrawInfo(int indx1, int indx2);
 };
-
+#endif

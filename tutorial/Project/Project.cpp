@@ -17,7 +17,7 @@ Project::Project()
 {
 }
 
-//Project::Project(float angle ,float relationWH, float near, float far) : Scene(angle,relationWH,near,far)
+//Project::Project(float angle ,float relationWH, float zNear, float zFar) : Scene(angle,relationWH,zNear,zFar)
 //{ 	
 //}
 

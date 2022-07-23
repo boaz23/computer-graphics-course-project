@@ -26,7 +26,7 @@ Assignment2::Assignment2()
 	time = 0;
 }
 
-//Assignment2::Assignment2(float angle ,float relationWH, float near, float far) : Scene(angle,relationWH,near,far)
+//Assignment2::Assignment2(float angle ,float relationWH, float zNear, float zFar) : Scene(angle,relationWH,zNear,zFar)
 //{ 	
 //}
 

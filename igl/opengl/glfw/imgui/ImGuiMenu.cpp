@@ -10,9 +10,9 @@
 //#include "ImGuiHelpers.h"
 #include <igl/project.h>
 #include "ImGuiHelpers.h"
+#include "igl/opengl/glfw/renderer.h"
 
 #include "ImGuiMenu.h"
-#include "../imgui.h"
 #include "igl/opengl/glfw/imgui/imgui_impl_glfw.h"
 #include "igl/opengl/glfw/imgui/imgui_impl_opengl3.h"
 
@@ -155,7 +155,7 @@ IGL_INLINE bool ImGuiMenu::key_up(GLFWwindow* window,int key, int modifiers)
 
 
 
-IGL_INLINE void ImGuiMenu::draw_viewer_menu(igl::opengl::glfw::Viewer *viewer, std::vector<igl::opengl::Camera*> &camera,Eigen::Vector4i& viewWindow,std::vector<DrawInfo *> drawInfos)
+IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::Viewer *viewer, std::vector<igl::opengl::Camera*> &camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow,std::vector<DrawInfo *> drawInfos)
 {
     bool* p_open = NULL;
     static bool no_titlebar = false;
@@ -194,11 +194,20 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(igl::opengl::glfw::Viewer *viewer, s
         window_flags
     );
 
+    float w = ImGui::GetContentRegionAvailWidth();
+    float p = ImGui::GetStyle().FramePadding.x;
+  
+  if (ImGui::CollapsingHeader("Cameras", ImGuiTreeNodeFlags_DefaultOpen))
+  {
+    if (ImGui::Button("Add camera", ImVec2(-1, 0)))
+    {
+        rndr->AddCamera(Eigen::Vector3d(0, 0, 0), cameraData);
+    }
+  }
+
   // Mesh
   if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
   {
-    float w = ImGui::GetContentRegionAvailWidth();
-    float p = ImGui::GetStyle().FramePadding.x;
     if (ImGui::Button("Load##Mesh", ImVec2((w-p)/2.f, 0)))
     {
         int savedIndx = viewer->selected_data_index;
@@ -243,9 +252,9 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(igl::opengl::glfw::Viewer *viewer, s
     // Zoom
     ImGui::PushItemWidth(80 * menu_scaling());
     if (camera[0]->_ortho)
-      ImGui::DragFloat("Zoom", &(camera[0]->_length), 0.05f, 0.1f, 20.0f);
+      ImGui::DragFloat("Zoom", &(camera[0]->length), 0.05f, 0.1f, 20.0f);
     else
-      ImGui::DragFloat("Fov", &(camera[0]->_fov), 0.05f, 30.0f, 90.0f);
+      ImGui::DragFloat("Fov", &(camera[0]->data.fov), 0.05f, 30.0f, 90.0f);
 
       // Select rotation type
     static Eigen::Quaternionf trackball_angle = Eigen::Quaternionf::Identity();
@@ -254,10 +263,10 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(igl::opengl::glfw::Viewer *viewer, s
     // Orthographic view
     ImGui::Checkbox("Orthographic view", &(camera[0]->_ortho));
     if (camera[0]->_ortho) {
-        camera[0]->SetProjection(0,camera[0]->_relationWH);
+        camera[0]->SetProjection(0,camera[0]->GetRelationWH());
       }
     else {
-        camera[0]->SetProjection(camera[0]->_fov > 0 ? camera[0]->_fov : 45,camera[0]->_relationWH);
+        camera[0]->SetProjection(camera[0]->GetAngle() > 0 ? camera[0]->GetAngle() : 45,camera[0]->GetRelationWH());
       }
 
       ImGui::PopItemWidth();

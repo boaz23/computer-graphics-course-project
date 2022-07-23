@@ -13,7 +13,7 @@ public:
 	float time;
 	Assignment2();
 	SceneData scnData;
-//	Assignment2(float angle,float relationWH,float near, float far);
+//	Assignment2(float angle,float relationWH,float zNear, float zFar);
 	
 	void Init();
 	void Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx);
