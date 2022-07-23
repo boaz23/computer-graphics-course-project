@@ -1,11 +1,20 @@
 #pragma once
 #include "igl/opengl/glfw/Viewer.h"
 
+const constexpr int DISPLAY_WIDTH = 1200;
+const constexpr int DISPLAY_HEIGHT = 800;
+const constexpr float DISPLAY_RATIO = (float)DISPLAY_WIDTH / (float)DISPLAY_HEIGHT;
+const constexpr float CAMERA_ANGLE = 45.0f;
+const constexpr float NEAR = 1.0f;
+const constexpr float FAR = 150.0f;
+const constexpr int infoIndx = 2;
+
 class Project : public igl::opengl::glfw::Viewer
 {
-	
+
 public:
-	
+	size_t selectedCameraIndex;
+
 	Project();
 //	Project(float angle,float relationWH,float near, float far);
 	void Init();

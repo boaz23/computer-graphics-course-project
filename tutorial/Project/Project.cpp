@@ -58,6 +58,7 @@ void Project::Init()
 
 	SetShapeMaterial(shapeIndex_cube, materialIndex_cube);
 
+	selectedCameraIndex = 0;
 
 	selected_data_index = shapeIndex_cube;
 	float cylinderLen = 1.6f;

@@ -3,6 +3,7 @@
 #include "igl/opengl/glfw/renderer.h"
 #include "Project.h"
 #include "imgui/imgui.h"
+#include "igl/opengl/util.h"
 
 
 	void glfw_mouse_callback(GLFWwindow* window,int button, int action, int mods)
@@ -83,7 +84,8 @@
         rndr->resize(window,width,height);
 		
 	}
-	
+
+	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta);
 	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
@@ -105,41 +107,40 @@
 				break;
 
 			case GLFW_KEY_UP:
-				rndr->MoveCamera(0, scn->xRotate, 0.05f);
-				
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->xRotate, 0.05f);
 				break;
 			case GLFW_KEY_DOWN:
 				//scn->shapeTransformation(scn->xGlobalRotate,-5.f);
 				//cout<< "down: "<<endl;
-				rndr->MoveCamera(0, scn->xRotate, -0.05f);
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->xRotate, -0.05f);
 				break;
 			case GLFW_KEY_LEFT:
-				rndr->MoveCamera(0, scn->yRotate, 0.05f);
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->yRotate, 0.05f);
 				break;
 			case GLFW_KEY_RIGHT:
 				//scn->shapeTransformation(scn->xGlobalRotate,-5.f);
 				//cout<< "down: "<<endl;
-				rndr->MoveCamera(0, scn->yRotate, -0.05f);
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->yRotate, -0.05f);
 				break;
 			case GLFW_KEY_U:
-				rndr->MoveCamera(0, scn->yTranslate, 0.25f);
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->yTranslate, 0.25f);
 				break;
 			case GLFW_KEY_D:
-				rndr->MoveCamera(0, scn->yTranslate, -0.25f);
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->yTranslate, -0.25f);
 				break;
 			case GLFW_KEY_L:
-				rndr->MoveCamera(0, scn->xTranslate, -0.25f);
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->xTranslate, -0.25f);
 				break;
 			
 			case GLFW_KEY_R:
-				rndr->MoveCamera(0, scn->xTranslate, 0.25f);
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->xTranslate, 0.25f);
 				break;
 			
 			case GLFW_KEY_B:
-				rndr->MoveCamera(0, scn->zTranslate, 0.5f);
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->zTranslate, 0.5f);
 				break;
 			case GLFW_KEY_F:
-				rndr->MoveCamera(0, scn->zTranslate, -0.5f);
+				rndr->MoveCamera(scn->selectedCameraIndex, scn->zTranslate, -0.5f);
 				break;
 			case GLFW_KEY_1:
 				std::cout << "picked 1\n";
@@ -153,11 +154,30 @@
 				std::cout << "picked 3\n";
 				scn->selected_data_index = 3;
 				break;
+			case GLFW_KEY_O:
+				ChangeCameraIndex_ByDelta(rndr, scn, -1);
+				break;
+			case GLFW_KEY_P:
+				ChangeCameraIndex_ByDelta(rndr, scn, 1);
+				break;
 			default:
 				break;
 
 			}
 		}
+	}
+
+	void SetDrawCamera_DefaultViewport(Renderer* rndr, Project* scn, size_t cameraIndex)
+	{
+		rndr->GetDrawInfo(0).cameraIndx = cameraIndex;
+		rndr->GetDrawInfo(1).cameraIndx = cameraIndex;
+	}
+
+	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta)
+	{
+		size_t cameraIndex = addCyclic<int>(static_cast<int>(scn->selectedCameraIndex), delta, rndr->CamerasCount());
+		scn->selectedCameraIndex = cameraIndex;
+		SetDrawCamera_DefaultViewport(rndr, scn, cameraIndex);
 	}
 
 

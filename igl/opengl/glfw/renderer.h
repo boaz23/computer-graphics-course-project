@@ -140,6 +140,8 @@ public:
 
     void MouseProccessing(int button, int mode = 0, int viewportIndx = 0);
 
+    inline size_t CamerasCount() { return cameras.size(); }
+
     inline float GetNear(int cameraIndx) { return cameras[cameraIndx]->GetNear(); }
 
     inline float GetFar(int cameraIndx) { return cameras[cameraIndx]->GetFar(); }
@@ -149,6 +151,8 @@ public:
     inline void SetDrawFlag(int infoIndx, unsigned int flag) { drawInfos[infoIndx]->SetFlags(flag); }
 
     inline void ClearDrawFlag(int infoIndx, unsigned int flag) { drawInfos[infoIndx]->ClearFlags(flag); }
+
+    inline DrawInfo& GetDrawInfo(int index) { return *drawInfos[index]; }
 
     inline void Pressed() { isPressed = !isPressed; }
 
