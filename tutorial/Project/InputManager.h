@@ -122,24 +122,24 @@
 				//cout<< "down: "<<endl;
 				rndr->MoveCamera(scn->selectedCameraIndex, scn->yRotate, -0.05f);
 				break;
-			case GLFW_KEY_U:
+			case GLFW_KEY_Q:
 				rndr->MoveCamera(scn->selectedCameraIndex, scn->yTranslate, 0.25f);
 				break;
-			case GLFW_KEY_D:
+			case GLFW_KEY_E:
 				rndr->MoveCamera(scn->selectedCameraIndex, scn->yTranslate, -0.25f);
 				break;
-			case GLFW_KEY_L:
+			case GLFW_KEY_A:
 				rndr->MoveCamera(scn->selectedCameraIndex, scn->xTranslate, -0.25f);
 				break;
 			
-			case GLFW_KEY_R:
+			case GLFW_KEY_D:
 				rndr->MoveCamera(scn->selectedCameraIndex, scn->xTranslate, 0.25f);
 				break;
 			
-			case GLFW_KEY_B:
+			case GLFW_KEY_S:
 				rndr->MoveCamera(scn->selectedCameraIndex, scn->zTranslate, 0.5f);
 				break;
-			case GLFW_KEY_F:
+			case GLFW_KEY_W:
 				rndr->MoveCamera(scn->selectedCameraIndex, scn->zTranslate, -0.5f);
 				break;
 			case GLFW_KEY_1:
@@ -178,7 +178,7 @@
 		size_t selectedCameraIndex = scn->selectedCameraIndex;
 		size_t cameraIndex = addCyclic<int>(static_cast<int>(selectedCameraIndex), delta, rndr->CamerasCount());
 		scn->selectedCameraIndex = cameraIndex;
-		scn->CameraMeshUnhide(selectedCameraIndex, rndr->GetCamera(selectedCameraIndex).GetPosition());
+		scn->CameraMeshUnhide(selectedCameraIndex, rndr->GetCamera(selectedCameraIndex));
 		scn->CameraMeshHide(cameraIndex);
 		SetDrawCamera_DefaultViewport(rndr, scn, static_cast<int>(cameraIndex));
 	}

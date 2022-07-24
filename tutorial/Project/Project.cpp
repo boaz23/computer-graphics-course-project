@@ -1,6 +1,7 @@
 #include "Project.h"
 #include "AnimationCameraData.h"
 #include "igl/opengl/glfw/renderer.h"
+#include "igl/opengl/ViewerData.h"
 #include <iostream>
 
 
@@ -163,8 +164,10 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 		throw std::exception("Not implemented");
 		break;
 	case CameraKind::Animation:
-		int shapeIndex = AddShape(Sphere, -1, TRIANGLES, [&cameraIndex]() { return new AnimationCameraData(cameraIndex); });
+		int shapeIndex = AddShapeFromFile("./data/arm.obj", -1, TRIANGLES, [&cameraIndex]() { return new AnimationCameraData(cameraIndex); });
 		SetShapeShader(shapeIndex, shaderIndex_basic);
+		igl::opengl::ViewerData *shape = data_list[shapeIndex];
+		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
 		break;
 	}
 }
@@ -181,14 +184,16 @@ void Project::CameraMeshHide(int cameraIndex)
 	}
 }
 
-void Project::CameraMeshUnhide(int cameraIndex, Eigen::Vector3d newPosition)
+void Project::CameraMeshUnhide(int cameraIndex, const Movable& transformations)
 {
 	for (auto vd : data_list)
 	{
 		auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(vd);
 		if (pAnimationCameraData && pAnimationCameraData->cameraIndex == cameraIndex)
 		{
-			pAnimationCameraData->SetPosition(newPosition);
+			pAnimationCameraData->SetPosition(transformations.GetPosition());
+			pAnimationCameraData->SetRotation(transformations.GetRotation());
+			pAnimationCameraData->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
 			pAnimationCameraData->UnHide();
 		}
 	}

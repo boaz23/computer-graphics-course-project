@@ -43,7 +43,7 @@ public:
 
 	void AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
 	void CameraMeshHide(int cameraIndex);
-	void CameraMeshUnhide(int cameraIndex, Eigen::Vector3d newPosition);
+	void CameraMeshUnhide(int cameraIndex, const Movable &transformations);
 
 	inline bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
 	

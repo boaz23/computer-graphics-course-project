@@ -24,6 +24,7 @@ public:
     void MyRotate(Eigen::Vector3d rotAxis, double angle);
     void RotateInSystem(Eigen::Vector3d rotAxis, double angle);
     void MyRotate(const Eigen::Matrix3d &rot);
+    void SetRotation(const Eigen::Matrix3d& rot);
     void MyScale(Eigen::Vector3d amt);
 
 	void ZeroTrans();
