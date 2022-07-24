@@ -167,7 +167,7 @@
 		}
 	}
 
-	void SetDrawCamera_DefaultViewport(Renderer* rndr, Project* scn, size_t cameraIndex)
+	void SetDrawCamera_DefaultViewport(Renderer* rndr, Project* scn, int cameraIndex)
 	{
 		rndr->GetDrawInfo(0).cameraIndx = cameraIndex;
 		rndr->GetDrawInfo(1).cameraIndx = cameraIndex;
@@ -177,7 +177,7 @@
 	{
 		size_t cameraIndex = addCyclic<int>(static_cast<int>(scn->selectedCameraIndex), delta, rndr->CamerasCount());
 		scn->selectedCameraIndex = cameraIndex;
-		SetDrawCamera_DefaultViewport(rndr, scn, cameraIndex);
+		SetDrawCamera_DefaultViewport(rndr, scn, static_cast<int>(cameraIndex));
 	}
 
 

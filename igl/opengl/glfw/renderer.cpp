@@ -214,14 +214,16 @@ void Renderer::UpdatePress(float xpos, float ypos)
     yWhenPress = ypos;
 }
 
-void Renderer::AddCamera(const Eigen::Vector3d& pos, igl::opengl::CameraData cameraData, int infoIndx)
+int Renderer::AddCamera(const Eigen::Vector3d& pos, igl::opengl::CameraData cameraData, int infoIndx)
 {
     if (infoIndx > 0 && infoIndx < drawInfos.size())
     {
         drawInfos[infoIndx]->SetCamera(cameras.size());
     }
+    int cameraIndex = cameras.size();
     cameras.push_back(new igl::opengl::Camera(cameraData));
     cameras.back()->MyTranslate(pos, false);
+    return cameraIndex;
 }
 
 void Renderer::AddViewport(int left, int bottom, int width, int height)

@@ -116,7 +116,7 @@ public:
 
     void UpdatePress(float xpos, float ypos);
 
-    void AddCamera(const Eigen::Vector3d &pos, igl::opengl::CameraData cameraData,
+    int AddCamera(const Eigen::Vector3d &pos, igl::opengl::CameraData cameraData,
                    int infoIndx = -1);
 
     void AddViewport(int left, int bottom, int width, int height);

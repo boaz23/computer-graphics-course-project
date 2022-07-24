@@ -16,6 +16,8 @@
 #include "igl/opengl/glfw/imgui/imgui_impl_glfw.h"
 #include "igl/opengl/glfw/imgui/imgui_impl_opengl3.h"
 
+#include "tutorial/Project/Project.h"
+
 //#include <imgui_fonts_droid_sans.h>
 //#include <GLFW/glfw3.h>
 #include <iostream>
@@ -196,12 +198,18 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
 
     float w = ImGui::GetContentRegionAvailWidth();
     float p = ImGui::GetStyle().FramePadding.x;
-  
-  if (ImGui::CollapsingHeader("Cameras", ImGuiTreeNodeFlags_DefaultOpen))
+
+  Project* project = dynamic_cast<Project*>(viewer);
+  if (project && ImGui::CollapsingHeader("Cameras", ImGuiTreeNodeFlags_DefaultOpen))
   {
     if (ImGui::Button("Add camera", ImVec2(-1, 0)))
     {
-        rndr->AddCamera(Eigen::Vector3d(0, 0, 0), cameraData);
+        project->AddCamera(*rndr, Eigen::Vector3d(0, 0, 0), cameraData, CameraKind::Animation);
+    }
+
+    if (project->isInDesignMode && ImGui::Checkbox("Design mode", &project->isDesignModeView))
+    {
+        // Nothing to do for now
     }
   }
 
@@ -272,16 +280,17 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       ImGui::PopItemWidth();
   }
 
-  // Helper for setting viewport specific mesh options
-  auto make_checkbox = [&](const char *label, unsigned int &option)
-  {
-    return ImGui::Checkbox(label,
-      [&]() { return drawInfos[1]->is_set(option); },
-      [&](bool value) { return drawInfos[1]->set(option, value); }
-    );
-  };
       ImGui::ColorEdit4("Background", drawInfos[1]->Clear_RGBA.data(),
       ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel);
+
+    // Helper for setting viewport specific mesh options
+    auto make_checkbox = [&](const char* label, unsigned int& option)
+    {
+        return ImGui::Checkbox(label,
+            [&]() { return drawInfos[1]->is_set(option); },
+            [&](bool value) { return drawInfos[1]->set(option, value); }
+        );
+    };
 
   // Draw options
   if (ImGui::CollapsingHeader("Draw Options", ImGuiTreeNodeFlags_DefaultOpen))

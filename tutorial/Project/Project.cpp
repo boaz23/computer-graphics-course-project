@@ -1,4 +1,6 @@
 #include "Project.h"
+#include "AnimationCameraData.h"
+#include "igl/opengl/glfw/renderer.h"
 #include <iostream>
 
 
@@ -13,7 +15,7 @@ static void printMat(const Eigen::Matrix4d& mat)
 	}
 }
 
-Project::Project()
+Project::Project() : selectedCameraIndex{0}, isInDesignMode{true}, isDesignModeView{true}, shaderIndex_basic{-1}
 {
 }
 
@@ -22,14 +24,14 @@ Project::Project()
 //}
 
 void Project::Init()
-{		
+{
 	unsigned int texIDs[3] = { 0 , 1, 2};
 	unsigned int slots[3] = { 0 , 1, 2 };
 	
 	int shaderIndex_picking = AddShader("shaders/pickingShader");
 	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
 	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
-	int shaderIndex_basic = AddShader("shaders/basicShader");
+	shaderIndex_basic = AddShader("shaders/basicShader");
 	
 	int textureIndex_plane = AddTexture("textures/plane.png",2);
 	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box_", 3);
@@ -57,8 +59,6 @@ void Project::Init()
 	SetShapeMaterial(shapeIndex_axis, materialIndex_basic);
 
 	SetShapeMaterial(shapeIndex_cube, materialIndex_cube);
-
-	selectedCameraIndex = 0;
 
 	selected_data_index = shapeIndex_cube;
 	float cylinderLen = 1.6f;
@@ -143,6 +143,28 @@ void Project::ScaleAllShapes(float amt,int viewportIndx)
 		{
             data_list[i]->MyScale(Eigen::Vector3d(amt, amt, amt));
 		}
+	}
+}
+
+bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int viewportIndx) const
+{
+	auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(const_cast<igl::opengl::ViewerData*>(&data));
+	return (pAnimationCameraData == nullptr || EffectiveDesignModeView()) &&
+		Viewer::ShouldRenderViewerData(data, viewportIndx);
+}
+
+void Project::AddCamera(Renderer& renderer, const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
+{
+	int cameraIndex = renderer.AddCamera(position, cameraData);
+	switch (kind)
+	{
+	case CameraKind::Design:
+		throw std::exception("Not implemented");
+		break;
+	case CameraKind::Animation:
+		int shapeIndex = AddShape(Sphere, -1, TRIANGLES, [&cameraIndex]() { return new AnimationCameraData(cameraIndex); });
+		SetShapeShader(shapeIndex, shaderIndex_basic);
+		break;
 	}
 }
 

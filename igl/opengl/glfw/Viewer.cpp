@@ -114,10 +114,11 @@ IGL_INLINE bool
     Viewer::load_mesh_from_data(const Eigen::MatrixXd &V,
                                 const Eigen::MatrixXi &F,
                                 const Eigen::MatrixXd &UV_V,
-                                const Eigen::MatrixXi &UV_F) {
+                                const Eigen::MatrixXi &UV_F,
+                                const ViewerDataCreateFunc dataCreator) {
     if(!(data()->F.rows() == 0  && data()->V.rows() == 0))
     {
-        append_mesh();
+        append_mesh(dataCreator);
     }
     data()->clear();
         data()->set_mesh(V,F);
@@ -135,14 +136,15 @@ IGL_INLINE bool
                            Eigen::Vector3d(255.0/255.0,235.0/255.0,80.0/255.0));
     return true;
   }
+
   IGL_INLINE bool Viewer::load_mesh_from_file(
-      const std::string & mesh_file_name_string)
+      const std::string & mesh_file_name_string, const ViewerDataCreateFunc dataCreator)
   {
       bool normal_read = false;
     // Create new data slot and set to selected
     if(!(data()->F.rows() == 0  && data()->V.rows() == 0))
     {
-      append_mesh();
+      append_mesh(dataCreator);
     }
     data()->clear();
 
@@ -355,19 +357,13 @@ IGL_INLINE bool
     return data_list[index];
   }
 
-  IGL_INLINE int Viewer::append_mesh(bool visible /*= true*/)
+  IGL_INLINE int Viewer::append_mesh(const ViewerDataCreateFunc dataCreator)
   {
-    assert(data_list.size() >= 1);
-
-    data_list.emplace_back(new ViewerData());
-    selected_data_index = data_list.size()-1;
-    data_list.back()->id = next_data_id++;
-    //if (visible)
-    //    for (int i = 0; i < core_list.size(); i++)
-    //        data_list.back().set_visible(true, core_list[i].id);
-    //else
-    //    data_list.back().is_visible = 0;
-    return data_list.back()->id;
+      assert(data_list.size() >= 1);
+      data_list.emplace_back(dataCreator());
+      selected_data_index = data_list.size() - 1;
+      data_list.back()->id = next_data_id++;
+      return data_list.back()->id;
   }
 
   IGL_INLINE bool Viewer::erase_mesh(const size_t index)
@@ -424,7 +420,7 @@ IGL_INLINE bool
         for (int i = 0; i < data_list.size(); i++)
         {
             auto shape = data_list[i];
-            if (shape->Is2Render(viewportIndx))
+            if (ShouldRenderViewerData(*shape, viewportIndx))
             {
 
                 Eigen::Matrix4f Model = shape->MakeTransScale();
@@ -507,9 +503,9 @@ IGL_INLINE bool
         next_data_id +=1;
     }
 
-    int Viewer::AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int viewport)
+    int Viewer::AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport)
     {
-        this->load_mesh_from_file(fileName);
+        this->load_mesh_from_file(fileName, dataCreator);
         data()->type = MeshCopy;
         data()->mode = mode;
         data()->shaderID = 1;
@@ -522,35 +518,34 @@ IGL_INLINE bool
         return data_list.size() - 1;
     }
 
-
-    int Viewer::AddShape(int type, int parent, unsigned int mode, int viewport)
+    int Viewer::AddShape(int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport)
     {
       switch(type){
 // Axis, Plane, Cube, Octahedron, Tethrahedron, LineCopy, MeshCopy
           case Plane:
-              this->load_mesh_from_file("./data/plane.obj");
+              this->load_mesh_from_file("./data/plane.obj", dataCreator);
               break;
           case Cube:
          case Axis:
-              this->load_mesh_from_file("./data/cube.obj");
+              this->load_mesh_from_file("./data/cube.obj", dataCreator);
               break;
           case Octahedron:
-              this->load_mesh_from_file("./data/octahedron.obj");
+              this->load_mesh_from_file("./data/octahedron.obj", dataCreator);
               break;
           case Tethrahedron:
-              this->load_mesh_from_file("./data/Tetrahedron.obj");
+              this->load_mesh_from_file("./data/Tetrahedron.obj", dataCreator);
               break;
           case Sphere:
-              this->load_mesh_from_file("./data/sphere.obj");
+              this->load_mesh_from_file("./data/sphere.obj", dataCreator);
               break;
           case xCylinder:
-              this->load_mesh_from_file("./data/xcylinder.obj");
+              this->load_mesh_from_file("./data/xcylinder.obj", dataCreator);
               break;
           case yCylinder:
-              this->load_mesh_from_file("./data/ycylinder.obj");
+              this->load_mesh_from_file("./data/ycylinder.obj", dataCreator);
               break;
           case zCylinder:
-              this->load_mesh_from_file("./data/zcylinder.obj");
+              this->load_mesh_from_file("./data/zcylinder.obj", dataCreator);
               break;
           default:
               break;
@@ -580,9 +575,9 @@ IGL_INLINE bool
 
 
 
-    int Viewer::AddShapeCopy(int shpIndx, int parent, unsigned int mode, int viewport )
+    int Viewer::AddShapeCopy(int shpIndx, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport )
     {
-        load_mesh_from_data(data_list[shpIndx]->V, data_list[shpIndx]->F,data_list[shpIndx]->V_uv, data_list[shpIndx]->F_uv);
+        load_mesh_from_data(data_list[shpIndx]->V, data_list[shpIndx]->F,data_list[shpIndx]->V_uv, data_list[shpIndx]->F_uv, dataCreator);
         data()->type = data_list[shpIndx]->type;
         data()->mode = mode;
         data()->shaderID = data_list[shpIndx]->shaderID;
@@ -599,9 +594,9 @@ IGL_INLINE bool
                                  const Eigen::MatrixXi &F,
                                  const Eigen::MatrixXd &UV_V,
                                  const Eigen::MatrixXi &UV_F
-                                 ,int type, int parent, unsigned int mode, int viewport)
+                                 ,int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport)
     {
-        load_mesh_from_data(V, F, UV_V, UV_F);
+        load_mesh_from_data(V, F, UV_V, UV_F, dataCreator);
         data()->type = type;
         data()->mode = mode;
         data()->shaderID = 1;
@@ -785,7 +780,7 @@ IGL_INLINE bool
             Eigen::Vector4d pos = MVP * Model * Eigen::Vector4d(0,0,0,1);
             float xpix = (1 + pos.x() / pos.z()) * viewport.z() / 2;
             float ypix = (1 + pos.y() / pos.z()) * viewport.w() / 2;
-            if (data_list[i]->Is2Render(viewportIndx) && xpix < right && xpix > left && ypix < bottom && ypix > up)
+            if (ShouldRenderViewerData(*data_list[i], viewportIndx) && xpix < right && xpix > left && ypix < bottom && ypix > up)
             {
                 pShapes.push_back(i);
                 data_list[i]->AddViewport(newViewportIndx);
@@ -802,6 +797,11 @@ IGL_INLINE bool
         }
         else
             return 0;
+    }
+
+    bool Viewer::ShouldRenderViewerData(const ViewerData& data, const int viewportIndx) const
+    {
+        return data.Is2Render(viewportIndx);
     }
 
     int Viewer::AddTexture(const std::string& textureFileName, int dim)
