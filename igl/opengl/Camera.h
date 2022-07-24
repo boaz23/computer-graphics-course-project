@@ -10,29 +10,37 @@
 #include <Eigen/Core>
 namespace igl {
     namespace opengl {
+        struct CameraData {
+            IGL_INLINE CameraData(float fov, float relationWH, float zNear, float zFar)
+                : fov{fov}, relationWH{relationWH}, zNear{zNear}, zFar{zFar} {}
+
+            float fov, relationWH;
+            float zNear, zFar;
+        };
+
         class Camera : public Movable {
         public:
             IGL_INLINE Camera();
-            IGL_INLINE Camera(float fov, float relationWH, float zNear, float zFar);
+            IGL_INLINE Camera(CameraData data);
 
             IGL_INLINE Eigen::Matrix4f GetViewProjection() const {
                 return _projection;
             }
 
             IGL_INLINE float GetAngle() const {
-                return _fov;
+                return data.fov;
             }
 
             IGL_INLINE float GetNear() const {
-                return _near;
+                return data.zNear;
             }
 
             IGL_INLINE float GetFar() const {
-                return _far;
+                return data.zFar;
             }
 
             IGL_INLINE float GetRelationWH() const {
-                return _relationWH;
+                return data.relationWH;
             }
 
             IGL_INLINE void SetProjection(float fov, float relationWH);
@@ -40,8 +48,8 @@ namespace igl {
             IGL_INLINE float CalcMoveCoeff(float depth, int width) const;
 
             Eigen::Matrix4f _projection;
-            float _fov, _relationWH;
-            float _far, _near, _length;
+            CameraData data;
+            float length;
             bool _ortho;
 
         };
@@ -59,8 +67,8 @@ namespace igl {
 //            SERIALIZE_MEMBER(projection);
 //            SERIALIZE_MEMBER(fov);
 //            SERIALIZE_MEMBER(relationWH);
-//            SERIALIZE_MEMBER(_far);
-//            SERIALIZE_MEMBER(_near);
+//            SERIALIZE_MEMBER(zFar);
+//            SERIALIZE_MEMBER(zNear);
 //
 //        }
 //

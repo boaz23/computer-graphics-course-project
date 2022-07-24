@@ -19,7 +19,7 @@ Assignment1::Assignment1()
 	coeffs = Eigen::Vector4cf::Zero();
 }
 
-//Assignment1::Assignment1(float angle ,float relationWH, float near, float far) : Scene(angle,relationWH,near,far)
+//Assignment1::Assignment1(float angle ,float relationWH, float zNear, float zFar) : Scene(angle,relationWH,zNear,zFar)
 //{ 	
 //}
 

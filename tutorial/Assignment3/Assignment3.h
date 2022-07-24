@@ -7,7 +7,7 @@ class Assignment3 : public igl::opengl::glfw::Viewer
 public:
 	
 	Assignment3();
-//	Assignment3(float angle,float relationWH,float near, float far);
+//	Assignment3(float angle,float relationWH,float zNear, float zFar);
 	void Init();
 	void Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx);
 	void WhenRotate();

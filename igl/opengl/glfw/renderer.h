@@ -1,4 +1,7 @@
 #pragma once
+#ifndef IGL_OPENGL_GLFW_RENDERER_H
+#define IGL_OPENGL_GLFW_RENDERER_H
+
 #include <igl/igl_inline.h>
 #include <vector>
 #include <functional>
@@ -19,7 +22,7 @@ struct GLFWwindow;
 class Renderer 
 {
 public:
-    Renderer(float angle, float relationWH, float near, float far);
+    Renderer(igl::opengl::CameraData cameraData);
 
     enum buffersMode {
         COLOR, DEPTH, STENCIL, BACK, FRONT, NONE
@@ -113,7 +116,7 @@ public:
 
     void UpdatePress(float xpos, float ypos);
 
-    void AddCamera(const Eigen::Vector3d &pos, float fov, float relationWH, float zNear, float zFar,
+    int AddCamera(const Eigen::Vector3d &pos, igl::opengl::CameraData cameraData,
                    int infoIndx = -1);
 
     void AddViewport(int left, int bottom, int width, int height);
@@ -140,6 +143,10 @@ public:
 
     void MouseProccessing(int button, int mode = 0, int viewportIndx = 0);
 
+    inline size_t CamerasCount() const { return cameras.size(); }
+
+    inline const igl::opengl::Camera& GetCamera(int index) const { return *cameras[index]; }
+
     inline float GetNear(int cameraIndx) { return cameras[cameraIndx]->GetNear(); }
 
     inline float GetFar(int cameraIndx) { return cameras[cameraIndx]->GetFar(); }
@@ -149,6 +156,8 @@ public:
     inline void SetDrawFlag(int infoIndx, unsigned int flag) { drawInfos[infoIndx]->SetFlags(flag); }
 
     inline void ClearDrawFlag(int infoIndx, unsigned int flag) { drawInfos[infoIndx]->ClearFlags(flag); }
+
+    inline DrawInfo& GetDrawInfo(int index) { return *drawInfos[index]; }
 
     inline void Pressed() { isPressed = !isPressed; }
 
@@ -179,7 +188,7 @@ public:
     }
     inline bool IsPicked() { return isPicked; }
     inline bool IsMany() const { return isMany; }
-    void Init(igl::opengl::glfw::Viewer *scene, std::list<int> xViewport, std::list<int> yViewport, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
+    void Init(igl::opengl::glfw::Viewer *scene, std::list<int> xViewport, std::list<int> yViewport, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
 
 
 private:
@@ -216,4 +225,4 @@ private:
 
     void SwapDrawInfo(int indx1, int indx2);
 };
-
+#endif

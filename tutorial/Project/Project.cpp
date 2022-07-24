@@ -1,4 +1,7 @@
 #include "Project.h"
+#include "AnimationCameraData.h"
+#include "igl/opengl/glfw/renderer.h"
+#include "igl/opengl/ViewerData.h"
 #include <iostream>
 
 
@@ -13,27 +16,29 @@ static void printMat(const Eigen::Matrix4d& mat)
 	}
 }
 
-Project::Project()
+Project::Project() : selectedCameraIndex{0}, isInDesignMode{true}, isDesignModeView{true}, shaderIndex_basic{-1}
 {
 }
 
-//Project::Project(float angle ,float relationWH, float near, float far) : Scene(angle,relationWH,near,far)
+//Project::Project(float angle ,float relationWH, float zNear, float zFar) : Scene(angle,relationWH,zNear,zFar)
 //{ 	
 //}
 
 void Project::Init()
-{		
-	unsigned int texIDs[3] = { 0 , 1, 2};
-	unsigned int slots[3] = { 0 , 1, 2 };
-	
+{
 	int shaderIndex_picking = AddShader("shaders/pickingShader");
 	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
 	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
-	int shaderIndex_basic = AddShader("shaders/basicShader");
+	shaderIndex_basic = AddShader("shaders/basicShader");
 	
-	int textureIndex_plane = AddTexture("textures/plane.png",2);
+
+	int textureIndex_plane = AddTexture("textures/plane.png", 2);
 	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box_", 3);
 	int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
+	int textureIndex_box0 = AddTexture("textures/box0.bmp", 2);
+
+	unsigned int texIDs[3] = { textureIndex_box0, 1, 2 };
+	unsigned int slots[3] = { 0 , 1, 2 };
 
 	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
 	int materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
@@ -45,11 +50,10 @@ void Project::Init()
 	int shapeIndex_zCylinder2 = AddShape(zCylinder, 2, TRIANGLES);
 	int shapeIndex_axis = AddShape(Axis, -1, LINES);
 	
-	SetShapeShader(shapeIndex_zCylinder0, shaderIndex_basicTex);
-	SetShapeShader(shapeIndex_zCylinder1, shaderIndex_basicTex);
-	SetShapeShader(shapeIndex_zCylinder2, shaderIndex_basicTex);
+	SetShapeShader(shapeIndex_zCylinder0, shaderIndex_basic);
+	SetShapeShader(shapeIndex_zCylinder1, shaderIndex_basic);
+	SetShapeShader(shapeIndex_zCylinder2, shaderIndex_basic);
 	SetShapeShader(shapeIndex_axis, shaderIndex_basicTex);
-
 
 	SetShapeMaterial(shapeIndex_zCylinder0, materialIndex_basic);
 	SetShapeMaterial(shapeIndex_zCylinder1, materialIndex_basic);
@@ -57,7 +61,6 @@ void Project::Init()
 	SetShapeMaterial(shapeIndex_axis, materialIndex_basic);
 
 	SetShapeMaterial(shapeIndex_cube, materialIndex_cube);
-
 
 	selected_data_index = shapeIndex_cube;
 	float cylinderLen = 1.6f;
@@ -141,6 +144,57 @@ void Project::ScaleAllShapes(float amt,int viewportIndx)
 		if (data_list[i]->Is2Render(viewportIndx))
 		{
             data_list[i]->MyScale(Eigen::Vector3d(amt, amt, amt));
+		}
+	}
+}
+
+bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int viewportIndx) const
+{
+	auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(const_cast<igl::opengl::ViewerData*>(&data));
+	return (pAnimationCameraData == nullptr || EffectiveDesignModeView()) &&
+		Viewer::ShouldRenderViewerData(data, viewportIndx);
+}
+
+void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
+{
+	int cameraIndex = renderer->AddCamera(position, cameraData);
+	switch (kind)
+	{
+	case CameraKind::Design:
+		throw std::exception("Not implemented");
+		break;
+	case CameraKind::Animation:
+		int shapeIndex = AddShapeFromFile("./data/arm.obj", -1, TRIANGLES, [&cameraIndex]() { return new AnimationCameraData(cameraIndex); });
+		SetShapeShader(shapeIndex, shaderIndex_basic);
+		igl::opengl::ViewerData *shape = data_list[shapeIndex];
+		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
+		break;
+	}
+}
+
+void Project::CameraMeshHide(int cameraIndex)
+{
+	for (auto vd : data_list)
+	{
+		auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(vd);
+		if (pAnimationCameraData && pAnimationCameraData->cameraIndex == cameraIndex)
+		{
+			pAnimationCameraData->Hide();
+		}
+	}
+}
+
+void Project::CameraMeshUnhide(int cameraIndex, const Movable& transformations)
+{
+	for (auto vd : data_list)
+	{
+		auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(vd);
+		if (pAnimationCameraData && pAnimationCameraData->cameraIndex == cameraIndex)
+		{
+			pAnimationCameraData->SetPosition(transformations.GetPosition());
+			pAnimationCameraData->SetRotation(transformations.GetRotation());
+			pAnimationCameraData->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
+			pAnimationCameraData->UnHide();
 		}
 	}
 }

@@ -324,12 +324,13 @@ public:
 
     IGL_INLINE void RemoveViewport(int viewport) { viewports = viewports & ~(1 << viewport); }
 
-    IGL_INLINE bool Is2Render(int viewport) { return  (viewports & (1 << viewport)) && !hide ; }
+    IGL_INLINE bool Is2Render(int viewport) const { return  (viewports & (1 << viewport)) && !hide ; }
 
     inline bool IsStatic() { return isStatic; }
     inline void SetStatic() { isStatic = !isStatic; }
     inline void Hide() { hide = true; }
     inline void UnHide() { hide = false; }
+    inline void ToggleHide() { hide = !hide; }
 
     void Draw_overlay(Shader *shader, bool cond);
 

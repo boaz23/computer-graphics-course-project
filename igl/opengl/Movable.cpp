@@ -75,6 +75,11 @@ void Movable::MyRotate(const Eigen::Matrix3d& rot)
 	Tout.rotate(rot);
 }
 
+void Movable::SetRotation(const Eigen::Matrix3d& rot)
+{
+	Tout.rotate(Tout.rotation().transpose() * rot);
+}
+
 void Movable::MyScale(Eigen::Vector3d amt)
 {
 	Tin.scale(amt);
