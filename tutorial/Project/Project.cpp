@@ -25,17 +25,19 @@ Project::Project() : selectedCameraIndex{0}, isInDesignMode{true}, isDesignModeV
 
 void Project::Init()
 {
-	unsigned int texIDs[3] = { 0 , 1, 2};
-	unsigned int slots[3] = { 0 , 1, 2 };
-	
 	int shaderIndex_picking = AddShader("shaders/pickingShader");
 	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
 	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
 	shaderIndex_basic = AddShader("shaders/basicShader");
 	
-	int textureIndex_plane = AddTexture("textures/plane.png",2);
+
+	int textureIndex_plane = AddTexture("textures/plane.png", 2);
 	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box_", 3);
 	int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
+	int textureIndex_box0 = AddTexture("textures/box0.bmp", 2);
+
+	unsigned int texIDs[3] = { textureIndex_box0, 1, 2 };
+	unsigned int slots[3] = { 0 , 1, 2 };
 
 	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
 	int materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
@@ -47,11 +49,10 @@ void Project::Init()
 	int shapeIndex_zCylinder2 = AddShape(zCylinder, 2, TRIANGLES);
 	int shapeIndex_axis = AddShape(Axis, -1, LINES);
 	
-	SetShapeShader(shapeIndex_zCylinder0, shaderIndex_basicTex);
-	SetShapeShader(shapeIndex_zCylinder1, shaderIndex_basicTex);
-	SetShapeShader(shapeIndex_zCylinder2, shaderIndex_basicTex);
+	SetShapeShader(shapeIndex_zCylinder0, shaderIndex_basic);
+	SetShapeShader(shapeIndex_zCylinder1, shaderIndex_basic);
+	SetShapeShader(shapeIndex_zCylinder2, shaderIndex_basic);
 	SetShapeShader(shapeIndex_axis, shaderIndex_basicTex);
-
 
 	SetShapeMaterial(shapeIndex_zCylinder0, materialIndex_basic);
 	SetShapeMaterial(shapeIndex_zCylinder1, materialIndex_basic);
