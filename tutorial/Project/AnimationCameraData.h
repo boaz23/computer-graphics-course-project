@@ -6,7 +6,8 @@
 
 class AnimationCameraData : public igl::opengl::ViewerData {
 public:
-	AnimationCameraData(int cameraIndex) : cameraIndex{cameraIndex} {}
+	AnimationCameraData(int layer, int cameraIndex)
+		: igl::opengl::ViewerData(layer), cameraIndex{cameraIndex} {}
 
 	int cameraIndex;
 };

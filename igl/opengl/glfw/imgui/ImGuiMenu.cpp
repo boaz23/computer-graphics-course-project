@@ -198,11 +198,13 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
 
     float w = ImGui::GetContentRegionAvailWidth();
     float p = ImGui::GetStyle().FramePadding.x;
+    ImVec2 halfWidthVec2((w - p) / 2.f, 0);
+    ImVec2 fullWidthVec2(-1, 0);
 
   Project* project = dynamic_cast<Project*>(viewer);
   if (project && ImGui::CollapsingHeader("Cameras", ImGuiTreeNodeFlags_DefaultOpen))
   {
-    if (ImGui::Button("Add camera", ImVec2(-1, 0)))
+    if (ImGui::Button("Add camera", fullWidthVec2))
     {
         project->AddCamera(Eigen::Vector3d(0, 0, 0), cameraData, CameraKind::Animation);
     }
@@ -216,7 +218,7 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
   // Mesh
   if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
   {
-    if (ImGui::Button("Load##Mesh", ImVec2((w-p)/2.f, 0)))
+    if (ImGui::Button("Load##Mesh", halfWidthVec2))
     {
         int savedIndx = viewer->selected_data_index;
        // viewer->selected_data_index = viewer->parents.size();
@@ -238,14 +240,48 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       }
     }
     ImGui::SameLine(0, p);
-    if (ImGui::Button("Save##Mesh", ImVec2((w-p)/2.f, 0)))
+    if (ImGui::Button("Save##Mesh", halfWidthVec2))
     {
       viewer->open_dialog_save_mesh();
     }
   }
 
+  if (viewer != nullptr && ImGui::CollapsingHeader("Layers", ImGuiTreeNodeFlags_DefaultOpen))
+  {
+      if (ImGui::Button("Add layer", fullWidthVec2))
+      {
+          viewer->AddLayer();
+      }
+
+      ImGui::Text("Layer:");
+      ImGui::SameLine(0, p);
+      ImGui::PushItemWidth(80 * menu_scaling());
+      int prevEditingLayer = viewer->currentEditingLayer;
+      int maxLayer = viewer->LayersCount() - 1;
+      if (ImGui::InputInt("", &viewer->currentEditingLayer))
+      {
+          if (viewer->currentEditingLayer < 1 || viewer->currentEditingLayer > maxLayer)
+          {
+              viewer->currentEditingLayer = prevEditingLayer;
+          }
+      }
+      ImGui::SameLine(0, 0);
+      ImGui::Text(" / %d", maxLayer);
+
+      bool isCurrentLayerHidden = viewer->IsLayerHidden(viewer->currentEditingLayer);
+
+      ImGui::Text("State:");
+      ImGui::SameLine(0, p);
+      ImGui::Text(isCurrentLayerHidden ? "Hidden" : "Shown");
+
+      if (ImGui::Button(isCurrentLayerHidden ? "Show layer" : "Hide layer", fullWidthVec2))
+      {
+          viewer->ToggleLayerVisibility(viewer->currentEditingLayer);
+      }
+  }
+
   // Viewing options
-  if (ImGui::CollapsingHeader("Viewing Options", ImGuiTreeNodeFlags_DefaultOpen))
+  if (ImGui::CollapsingHeader("Viewing Options"))
   {
     if (ImGui::Button("Center object", ImVec2(-1, 0)))
     {
@@ -293,7 +329,7 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
     };
 
   // Draw options
-  if (ImGui::CollapsingHeader("Draw Options", ImGuiTreeNodeFlags_DefaultOpen))
+  if (ImGui::CollapsingHeader("Draw Options"))
   {
     if (ImGui::Checkbox("Face-based", &(viewer->data()->face_based)))
     {
@@ -316,7 +352,7 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
   }
 
   // Overlays
-  if (ImGui::CollapsingHeader("Overlays", ImGuiTreeNodeFlags_DefaultOpen))
+  if (ImGui::CollapsingHeader("Overlays"))
   {
     make_checkbox("Wireframe", viewer->data()->show_lines);
     make_checkbox("Fill", viewer->data()->show_faces);

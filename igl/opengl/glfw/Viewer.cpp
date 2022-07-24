@@ -60,8 +60,6 @@ namespace glfw
 
   void Viewer::Init(const std::string config)
   {
-	  
-
   }
 
   IGL_INLINE Viewer::Viewer():
@@ -69,7 +67,10 @@ namespace glfw
     selected_data_index(0),
     next_data_id(1),
     next_shader_id(1),
-	isActive(false)
+	isActive(false),
+      renderer{nullptr},
+      layers{},
+      currentEditingLayer{1}
   {
     data_list.front() = new ViewerData();
     data_list.front()->id = 0;
@@ -110,6 +111,19 @@ namespace glfw
   IGL_INLINE Viewer::~Viewer()
   {
   }
+
+  void Viewer::ToggleLayerVisibility(int layer)
+  {
+      layers[layer] = !layers[layer];
+  }
+
+  int Viewer::AddLayer()
+  {
+      int newLayer = layers.size();
+      layers.push_back(false);
+      return newLayer;
+  }
+
 IGL_INLINE bool
     Viewer::load_mesh_from_data(const Eigen::MatrixXd &V,
                                 const Eigen::MatrixXi &F,
@@ -801,7 +815,7 @@ IGL_INLINE bool
 
     bool Viewer::ShouldRenderViewerData(const ViewerData& data, const int viewportIndx) const
     {
-        return data.Is2Render(viewportIndx);
+        return !IsLayerHidden(data.layer) && data.Is2Render(viewportIndx);
     }
 
     int Viewer::AddTexture(const std::string& textureFileName, int dim)

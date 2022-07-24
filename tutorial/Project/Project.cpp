@@ -26,6 +26,9 @@ Project::Project() : selectedCameraIndex{0}, isInDesignMode{true}, isDesignModeV
 
 void Project::Init()
 {
+	Viewer::AddLayer();
+	Viewer::AddLayer();
+
 	int shaderIndex_picking = AddShader("shaders/pickingShader");
 	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
 	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
@@ -164,7 +167,16 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 		throw std::exception("Not implemented");
 		break;
 	case CameraKind::Animation:
-		int shapeIndex = AddShapeFromFile("./data/arm.obj", -1, TRIANGLES, [&cameraIndex]() { return new AnimationCameraData(cameraIndex); });
+		int shapeIndex = AddShapeFromFile
+		(
+			"./data/arm.obj",
+			-1,
+			TRIANGLES,
+			[this, &cameraIndex]()
+			{
+				return new AnimationCameraData(currentEditingLayer, cameraIndex);
+			}
+		);
 		SetShapeShader(shapeIndex, shaderIndex_basic);
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
 		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);

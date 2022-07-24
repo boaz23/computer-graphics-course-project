@@ -48,7 +48,10 @@ private:
     bool isStatic;
 
 public:
-  ViewerData();
+    int layer;
+
+    ViewerData() : ViewerData(0) {}
+    ViewerData(int layer);
     IGL_INLINE void Draw(Shader* shader, bool cond);
     IGL_INLINE void SetShader(const int id) { shaderID = id; }
     IGL_INLINE int GetShader() const{
