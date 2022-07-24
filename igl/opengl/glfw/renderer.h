@@ -143,7 +143,9 @@ public:
 
     void MouseProccessing(int button, int mode = 0, int viewportIndx = 0);
 
-    inline size_t CamerasCount() { return cameras.size(); }
+    inline size_t CamerasCount() const { return cameras.size(); }
+
+    inline const igl::opengl::Camera& GetCamera(int index) const { return *cameras[index]; }
 
     inline float GetNear(int cameraIndx) { return cameras[cameraIndx]->GetNear(); }
 

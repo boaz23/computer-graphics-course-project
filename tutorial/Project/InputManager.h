@@ -47,7 +47,7 @@
 		}
 		else
 		{
-			rndr->MoveCamera(0, rndr->zTranslate, (float)yoffset);
+			rndr->MoveCamera(scn->selectedCameraIndex, rndr->zTranslate, (float)yoffset);
 		}
 		
 	}
@@ -175,8 +175,11 @@
 
 	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta)
 	{
-		size_t cameraIndex = addCyclic<int>(static_cast<int>(scn->selectedCameraIndex), delta, rndr->CamerasCount());
+		size_t selectedCameraIndex = scn->selectedCameraIndex;
+		size_t cameraIndex = addCyclic<int>(static_cast<int>(selectedCameraIndex), delta, rndr->CamerasCount());
 		scn->selectedCameraIndex = cameraIndex;
+		scn->CameraMeshUnhide(selectedCameraIndex, rndr->GetCamera(selectedCameraIndex).GetPosition());
+		scn->CameraMeshHide(cameraIndex);
 		SetDrawCamera_DefaultViewport(rndr, scn, static_cast<int>(cameraIndex));
 	}
 

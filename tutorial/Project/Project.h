@@ -42,6 +42,8 @@ public:
 	void ScaleAllShapes(float amt, int viewportIndx);
 
 	void AddCamera(Renderer &renderer, const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
+	void CameraMeshHide(int cameraIndex);
+	void CameraMeshUnhide(int cameraIndex, Eigen::Vector3d newPosition);
 
 	inline bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
 	

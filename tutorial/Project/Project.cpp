@@ -168,6 +168,31 @@ void Project::AddCamera(Renderer& renderer, const Eigen::Vector3d position, cons
 	}
 }
 
+void Project::CameraMeshHide(int cameraIndex)
+{
+	for (auto vd : data_list)
+	{
+		auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(vd);
+		if (pAnimationCameraData && pAnimationCameraData->cameraIndex == cameraIndex)
+		{
+			pAnimationCameraData->Hide();
+		}
+	}
+}
+
+void Project::CameraMeshUnhide(int cameraIndex, Eigen::Vector3d newPosition)
+{
+	for (auto vd : data_list)
+	{
+		auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(vd);
+		if (pAnimationCameraData && pAnimationCameraData->cameraIndex == cameraIndex)
+		{
+			pAnimationCameraData->SetPosition(newPosition);
+			pAnimationCameraData->UnHide();
+		}
+	}
+}
+
 Project::~Project(void)
 {
 }
