@@ -204,7 +204,7 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
   {
     if (ImGui::Button("Add camera", ImVec2(-1, 0)))
     {
-        project->AddCamera(*rndr, Eigen::Vector3d(0, 0, 0), cameraData, CameraKind::Animation);
+        project->AddCamera(Eigen::Vector3d(0, 0, 0), cameraData, CameraKind::Animation);
     }
 
     if (project->isInDesignMode && ImGui::Checkbox("Design mode", &project->isDesignModeView))

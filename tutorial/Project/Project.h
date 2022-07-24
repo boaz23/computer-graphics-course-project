@@ -41,7 +41,7 @@ public:
 	void Animate() override;
 	void ScaleAllShapes(float amt, int viewportIndx);
 
-	void AddCamera(Renderer &renderer, const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
+	void AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
 	void CameraMeshHide(int cameraIndex);
 	void CameraMeshUnhide(int cameraIndex, Eigen::Vector3d newPosition);
 
@@ -53,7 +53,6 @@ protected:
 	bool ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int viewportIndx) const override;
 
 private:
-	std::vector<size_t> camerasAnimationIndices;
 	int shaderIndex_basic;
 };
 

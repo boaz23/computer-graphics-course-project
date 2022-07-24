@@ -34,7 +34,7 @@
 #define IGL_MOD_ALT             0x0004
 #define IGL_MOD_SUPER           0x0008
 
-
+class Renderer;
 
 namespace igl
 {
@@ -48,6 +48,8 @@ namespace glfw
   class Viewer : public Movable
   {
   public:
+      Renderer* renderer;
+
       enum axis { xAxis, yAxis, zAxis };
       enum transformations { xTranslate, yTranslate, zTranslate, xRotate, yRotate, zRotate, xScale, yScale, zScale,scaleAll,reset };
       enum modes { POINTS, LINES, LINE_LOOP, LINE_STRIP, TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN, QUADS };

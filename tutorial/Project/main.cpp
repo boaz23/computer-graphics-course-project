@@ -12,6 +12,7 @@ int main(int argc,char *argv[])
 	igl::opengl::CameraData cameraData(CAMERA_ANGLE, DISPLAY_RATIO, NEAR, FAR);
     Renderer* rndr = new Renderer(cameraData);
 	Project *scn = new Project();  //initializing scene
+	scn->renderer = rndr;
 	
     Init(disp,menu); //adding callback functions
 	scn->Init();    //adding shaders, textures, shapes to scene

@@ -153,9 +153,9 @@ bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const 
 		Viewer::ShouldRenderViewerData(data, viewportIndx);
 }
 
-void Project::AddCamera(Renderer& renderer, const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
+void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
 {
-	int cameraIndex = renderer.AddCamera(position, cameraData);
+	int cameraIndex = renderer->AddCamera(position, cameraData);
 	switch (kind)
 	{
 	case CameraKind::Design:
