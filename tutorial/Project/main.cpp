@@ -21,8 +21,15 @@ int main(int argc,char *argv[])
     Init(disp,menu); //adding callback functions
 	scn->Init();    //adding shaders, textures, shapes to scene
     rndr->Init(scn,x,y,1,menu); // adding scene and viewports to the renderer
-    disp.SetRenderer(rndr);
+	disp.SetRenderer(rndr);
 
+	rndr->AddViewport(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+	rndr->CopyDraw(1, rndr->viewport, 1);
+	rndr->ClearDrawFlag(2, rndr->toClear | rndr->stencilTest);
+	rndr->SetDrawFlag(2, rndr->blend | rndr->inAction2 | rndr->scissorTest);
+
+	rndr->AddViewport(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+	rndr->AddDraw(2, 0, 0, 0, rndr->inAction | rndr->depthTest | rndr->blend | rndr->clearStencil | rndr->passStencil | rndr->onPicking | rndr->stencilTest | rndr->scaleAbit);
     disp.launch_rendering(rndr);
 
 	delete scn;

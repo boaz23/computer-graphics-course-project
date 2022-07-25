@@ -7,39 +7,41 @@
 
 	void glfw_mouse_callback(GLFWwindow* window,int button, int action, int mods)
 	{	
+		bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
+		Project* scn = (Project*)rndr->GetScene();
+		double x2, y2;
+		glfwGetCursorPos(window, &x2, &y2);
 		if (action == GLFW_PRESS)
 		{
-			int state = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
-			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
-			Project* scn = (Project*)rndr->GetScene();
-			double x2, y2;
-			glfwGetCursorPos(window, &x2, &y2);
 			rndr->UpdatePress(x2, y2);
-			if (state != GLFW_PRESS && !rndr->IsMany()) {
+			if (button == GLFW_MOUSE_BUTTON_LEFT)
+				rndr->Pressed();
+			// if not in select many mode and shift not pressed -> single picking
+			if (!shiftPressed && !rndr->IsMany()) {
 				if (rndr->Picking((int)x2, (int)y2))
 				{
 					rndr->UpdatePosition(x2, y2);
-					if (button == GLFW_MOUSE_BUTTON_LEFT)
-						rndr->Pressed();
 				}
-				else
-				{
-					rndr->UnPick(2);
-				}
-			}		
+			}
+			// start select many mode
+			else if (shiftPressed) {
+				rndr->StartSelect();
+			}
 		}
 		else
 		{
 			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
-			int state = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
-			if (state == GLFW_PRESS) {
-				rndr->PickMany(0);
-				if (!rndr->IsPicked())
-				{
-					rndr->UnPick(2);
-				}
+			// if exiting select many mode apply selection
+			if (rndr->isInSelectMode()) {
+				rndr->PickMany(2);
+				rndr->finishSelect();
 			}
-			//rndr->UnPick(2);
+			else {
+				// if not in selection mode but many picked check if this is a click or drag and 
+				// single pick if click(else nothing will happend and usual drag will continue)
+				rndr->TrySinglePicking((int)x2, (int)y2);
+			}
 		}
 	}
 	
@@ -69,21 +71,17 @@
 
 		if (rndr->CheckViewport(xpos,ypos, 0))
 		{
-			int state = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
-			if (state != GLFW_PRESS)
+			bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+			if (!shiftPressed)
 			{
 				if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
 				{
-
 					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT);
 				}
 				else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
 				{
-
 					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_LEFT);
 				}
-				//else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_RELEASE && rndr->IsPicked() && rndr->IsMany())
-				//	rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT);
 			}
 		}
 	}
@@ -100,7 +98,6 @@
 	{
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
-		//rndr->FreeShapes(2);
 		if (action == GLFW_PRESS || action == GLFW_REPEAT)
 		{
 			switch (key)

@@ -469,17 +469,18 @@ IGL_INLINE bool
                 }
                 else
                 { //picking
+                    // Changed: replaced hardcoded 0 with the draw shader
                     if (flgs & 16384)
                     {   //stencil
                         Eigen::Affine3f scale_mat = Eigen::Affine3f::Identity();
                         scale_mat.scale(Eigen::Vector3f(1.1f, 1.1f, 1.1f));
-                        Update(Proj, View , Model * scale_mat.matrix(), 0,i);
+                        Update(Proj, View , Model * scale_mat.matrix(), shaderIndx,i);
                     }
                     else
                     {
-                        Update(Proj, View ,  Model, 0,i);
+                        Update(Proj, View ,  Model, shaderIndx,i);
                     }
-                    shape->Draw(shaders[0], true);
+                    shape->Draw(shaders[shaderIndx], true);
                 }
             }
         }
@@ -627,19 +628,25 @@ IGL_INLINE bool
     //return coordinates in global system for a tip of arm position is local system
     void Viewer::MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat,int viewportIndx)
     {
+        // Changed: modified to support mesh transformations and multipicking
+        // TODO no scale?
         Eigen::Matrix4d scnMat = Eigen::Matrix4d::Identity();
         if (selected_data_index <= 0 && !(staticScene & (1 << viewportIndx)))
-            scnMat = MakeTransd().inverse();
+            scnMat = MakeTransd();
         else if (!(staticScene & (1 << viewportIndx)))
             scnMat = (MakeTransd() * GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index));
         else if(selected_data_index > 0)
-            scnMat = (GetPriviousTrans(Eigen::Matrix4d::Identity(),selected_data_index )).inverse();
+            scnMat = (GetPriviousTrans(Eigen::Matrix4d::Identity(),selected_data_index ));
 
         if (button == 1)
         {
             for (int pShape : pShapes)
             {
                 selected_data_index = pShape;
+                WhenTranslate(cameraMat * scnMat, -xrel / movCoeff, yrel / movCoeff);
+            }
+            // TODO apply to camera
+            if (pShapes.size() == 0) {
                 WhenTranslate(cameraMat * scnMat, -xrel / movCoeff, yrel / movCoeff);
             }
         }
@@ -649,9 +656,15 @@ IGL_INLINE bool
 
             if (button == 0)
             {
-//                if (selected_data_index > 0 )
-                    WhenRotate(scnMat * cameraMat, -((float)xrel/180) / movCoeff, ((float)yrel/180) / movCoeff);
-
+                for (int pShape : pShapes)
+                {
+                    selected_data_index = pShape;
+                    WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
+                }
+                // TODO apply to camera
+                if (pShapes.size() == 0) {
+                    WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
+                }
             }
             else
             {
@@ -659,8 +672,9 @@ IGL_INLINE bool
                 for (int pShape : pShapes)
                 {
                     selected_data_index = pShape;
-                    WhenScroll(scnMat * cameraMat, yrel / movCoeff);
+                    WhenScroll(cameraMat * scnMat, yrel / movCoeff);
                 }
+                // TODO apply to camera
             }
         }
     }
@@ -711,11 +725,10 @@ IGL_INLINE bool
 
     }
 
-    bool Viewer::Picking(unsigned char data[4], int newViewportIndx)
+    float Viewer::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y)
     {
-
-        return false;
-
+        // Changed: default picking
+        return -1.0;
     }
 
     void Viewer::WhenTranslate( const Eigen::Matrix4d& preMat, float dx, float dy)
@@ -734,14 +747,11 @@ IGL_INLINE bool
         Movable* obj;
         if (selected_data_index == 0 || data()->IsStatic())
             obj = (Movable*)this;
-        else
-        {
-            int ps = selected_data_index;
-            for (; parents[ps] > -1; ps = parents[ps]);
-            obj = (Movable*)data_list[ps];
-        }
-        obj->RotateInSystem(Eigen::Vector3d(0, 1, 0), dx);
-        obj->RotateInSystem( Eigen::Vector3d(1, 0, 0), dy);
+        else  if (selected_data_index > 0) { obj = (Movable*)data(); }
+        Eigen::Vector4d xRotation = preMat.transpose() * Eigen::Vector4d(0, 1, 0, 0);
+        Eigen::Vector4d yRotation = preMat.transpose() * Eigen::Vector4d(1, 0, 0, 0);
+        obj->RotateInSystem(xRotation.head(3), dx);
+        obj->RotateInSystem(yRotation.head(3), dy);
         WhenRotate(dx, dy);
     }
 

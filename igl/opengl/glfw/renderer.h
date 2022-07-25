@@ -174,12 +174,25 @@ public:
     }
 
     inline void UnPick(int viewportIndx) {
+        // Changed: clear isMany also
         isPicked = false;
+        isMany = false;
         scn->ClearPickedShapes(viewportIndx);
     }
     inline bool IsPicked() { return isPicked; }
     inline bool IsMany() const { return isMany; }
     void Init(igl::opengl::glfw::Viewer *scene, std::list<int> xViewport, std::list<int> yViewport, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
+    // Added: functions for selection mode and to try single pick
+    bool isInSelectMode() {
+        return isSelecting;
+    }
+    inline void StartSelect() {
+        isSelecting = true;
+    }
+    inline void finishSelect() {
+        isSelecting = false;
+    }
+    bool TrySinglePicking(int x, int y);
 
 
 private:
@@ -197,6 +210,8 @@ private:
     int xWhenPress, yWhenPress;
     bool isMany;
     bool isPicked;
+    // Added: added selection flag
+    bool isSelecting;
     int materialIndx2D;
     bool isPressed;
     int currentViewport;
