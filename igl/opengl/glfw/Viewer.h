@@ -28,13 +28,14 @@
 #include <list>
 #include <string>
 #include <cstdint>
+#include <unordered_set>
 
 #define IGL_MOD_SHIFT           0x0001
 #define IGL_MOD_CONTROL         0x0002
 #define IGL_MOD_ALT             0x0004
 #define IGL_MOD_SUPER           0x0008
 
-
+class Renderer;
 
 namespace igl
 {
@@ -42,10 +43,16 @@ namespace opengl
 {
 namespace glfw
 {
+    using ViewerDataCreateFunc = std::function<ViewerData*()>;
+
   // GLFW-based mesh viewer
   class Viewer : public Movable
   {
   public:
+      Renderer* renderer;
+      std::vector<bool> layers;
+      int currentEditingLayer;
+
       enum axis { xAxis, yAxis, zAxis };
       enum transformations { xTranslate, yTranslate, zTranslate, xRotate, yRotate, zRotate, xScale, yScale, zScale,scaleAll,reset };
       enum modes { POINTS, LINES, LINE_LOOP, LINE_STRIP, TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN, QUADS };
@@ -57,9 +64,8 @@ namespace glfw
     virtual void Init(const std::string config);
 	virtual void Animate() {}
 	virtual void WhenTranslate() {}
-	virtual Eigen::Vector3d GetCameraPosition() { return Eigen::Vector3d(0, 0, 0); }
-	virtual Eigen::Vector3d GetCameraForward() { return Eigen::Vector3d(0, 0, -1); }
-	virtual Eigen::Vector3d GetCameraUp() { return Eigen::Vector3d(0, 1, 0); }
+
+    IGL_INLINE ViewerData* DefualtViewerDataCreator() { return new ViewerData(currentEditingLayer); }
 
 	//IGL_INLINE void init_plugins();
     //IGL_INLINE void shutdown_plugins();
@@ -67,13 +73,31 @@ namespace glfw
     virtual ~Viewer();
       virtual void Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx){};
       virtual void Update_overlay(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int shapeIndx,bool is_points);
-      virtual int AddShape(int type, int parent, unsigned int mode, int viewport = 0);
-      virtual int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int viewport = 0);
+
+      IGL_INLINE bool IsLayerHidden(int layer) const { return layers[layer]; }
+      IGL_INLINE size_t LayersCount() const { return layers.size(); }
+      void ToggleLayerVisibility(int layer);
+      int AddLayer();
+
+      virtual int AddShape(int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
+      IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int viewport = 0)
+      {
+          return AddShape(type, parent, mode, std::bind(&Viewer::DefualtViewerDataCreator, this), viewport);
+      }
+      virtual int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
+      IGL_INLINE int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int viewport = 0)
+      {
+          return AddShapeFromFile(fileName, parent, mode, std::bind(&Viewer::DefualtViewerDataCreator, this), viewport);
+      }
       virtual void WhenTranslate(float dx, float dy) {}
       virtual void WhenRotate(float dx, float dy) {}
       virtual void WhenScroll(float dy) {}
     // Mesh IO
-    IGL_INLINE bool load_mesh_from_file(const std::string & mesh_file_name);
+    IGL_INLINE bool load_mesh_from_file(const std::string & mesh_file_name, const ViewerDataCreateFunc dataCreator);
+    IGL_INLINE bool load_mesh_from_file(const std::string& mesh_file_name)
+    {
+        return load_mesh_from_file(mesh_file_name, std::bind(&Viewer::DefualtViewerDataCreator, this));
+    }
     IGL_INLINE bool save_mesh_to_file(const std::string & mesh_file_name);
    
     // Scene IO
@@ -112,7 +136,7 @@ namespace glfw
     // Side Effects:
     //   selected_data_index is set this newly created, last entry (i.e.,
     //   #meshes-1)
-    IGL_INLINE int append_mesh(bool visible = true);
+    IGL_INLINE int append_mesh(const ViewerDataCreateFunc dataCreator);
 
     // Erase a mesh (i.e., its corresponding data and state entires in data_list
     // and opengl_state_list)
@@ -217,7 +241,7 @@ public:
 
       void SetShader_point_overlay(const std::string &fileName);
 
-      int AddShapeCopy(int shpIndx, int parent, unsigned int mode, int viewport = 0);
+      int AddShapeCopy(int shpIndx, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
 
       void ShapeTransformation(int type, float amt, int mode);
 
@@ -226,14 +250,17 @@ public:
       inline void UnPick() { selected_data_index = -1; pickedShapes.clear(); }
 
       bool load_mesh_from_data(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const Eigen::MatrixXd &UV_V,
-                               const Eigen::MatrixXi &UV_F);
+                               const Eigen::MatrixXi &UV_F, const ViewerDataCreateFunc dataCreator);
 
       int AddShapeFromData(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const Eigen::MatrixXd &UV_V,
-                           const Eigen::MatrixXi &UV_F, int type, int parent, unsigned int mode, int viewport);
+                           const Eigen::MatrixXi &UV_F, int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport);
 
       int AddShader(const std::string &Vertex_Shader, const std::string &Fragment_shader);
 
       void SetParent(int indx, int newValue, bool savePosition);
+
+  protected:
+      virtual bool ShouldRenderViewerData(const ViewerData& data, const int viewportIndx) const;
   };
 
 } // end namespace

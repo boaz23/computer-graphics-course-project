@@ -18,7 +18,7 @@ Game::Game()
 	time = 0;
 }
 
-//Game::Game(float angle ,float relationWH, float near, float far) : Scene(angle,relationWH,near,far)
+//Game::Game(float angle ,float relationWH, float zNear, float zFar) : Scene(angle,relationWH,zNear,zFar)
 //{ 	
 //}
 
@@ -85,18 +85,18 @@ void Game::Init()
 	SetShapeMaterial(2, 3);
 	SetShapeMaterial(5, 2);
 	//SetShapeMaterial(6, 0);
-	pickedShape = 0;
+	selected_data_index = 0;
 	float s = 60;
 	ShapeTransformation(scaleAll, s,0);
-	pickedShape = 1;
+	selected_data_index = 1;
 	ShapeTransformation(xTranslate, 10,0);
-	//pickedShape = 2;
+	//selected_data_index = 2;
 	//ShapeTransformation(yTranslate, 10, 0);
-	pickedShape = 5;
+	selected_data_index = 5;
 	ShapeTransformation(xTranslate, -10,0);
-	//pickedShape = 6;
+	//selected_data_index = 6;
 	//ShapeTransformation(zTranslate, -1.1,0);
-	pickedShape = -1;
+	selected_data_index = -1;
 	SetShapeStatic(0);
 	SetShapeStatic(6);
 	//SetShapeViewport(0, -1);
@@ -119,7 +119,7 @@ void Game::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, cons
 	s->SetUniform1i("time", time);
 	if (data_list[shapeIndx]->GetMaterial() >= 0 && !materials.empty())
 	{
-//		materials[shapes[pickedShape]->GetMaterial()]->Bind(textures);
+//		materials[shapes[selected_data_index]->GetMaterial()]->Bind(textures);
 		BindMaterial(s, data_list[shapeIndx]->GetMaterial());
 	}
 
@@ -132,7 +132,7 @@ void Game::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, cons
 	
 	
 
-	//s->SetUniform1i("sampler2", materials[shapes[pickedShape]->GetMaterial()]->GetSlot(1));
+	//s->SetUniform1i("sampler2", materials[shapes[selected_data_index]->GetMaterial()]->GetSlot(1));
 	//s->SetUniform4f("lightDirection", 0.0f , 0.0f, -1.0f, 0.0f);
 //	if(shaderIndx == 0)
 //		s->SetUniform4f("lightColor",r/255.0f, g/255.0f, b/255.0f,1.0f);

@@ -21,7 +21,7 @@
 #include <iostream>
 
 
-IGL_INLINE igl::opengl::ViewerData::ViewerData()
+IGL_INLINE igl::opengl::ViewerData::ViewerData(int layer)
 : dirty(MeshGL::DIRTY_ALL),
   show_faces        (~unsigned(0)),
   show_lines        (~unsigned(0)),
@@ -43,7 +43,8 @@ IGL_INLINE igl::opengl::ViewerData::ViewerData()
   id(-1),
   materialID        (0),
   isCopy            (false),
-  isStatic          (false)
+  isStatic          (false),
+    layer{layer}
 
 {
   clear();

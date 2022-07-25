@@ -1,4 +1,7 @@
 #include "Project.h"
+#include "AnimationCameraData.h"
+#include "igl/opengl/glfw/renderer.h"
+#include "igl/opengl/ViewerData.h"
 #include <iostream>
 
 
@@ -13,47 +16,59 @@ static void printMat(const Eigen::Matrix4d& mat)
 	}
 }
 
-Project::Project()
+Project::Project() : selectedCameraIndex{0}, isInDesignMode{true}, isDesignModeView{true}, shaderIndex_basic{-1}
 {
 }
 
 void Project::Init()
-{
-	unsigned int texIDs[3] = { 0 , 1, 2 };
+{		
+	Viewer::AddLayer();
+	Viewer::AddLayer();
+	int shaderIndex_picking = AddShader("shaders/pickingShader");
+	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
+	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
+	shaderIndex_basic = AddShader("shaders/basicShader");
+
+	int textureIndex_plane = AddTexture("textures/plane.png", 2);
+	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box UV.png", 3);
+	int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
+	int textureIndex_box0 = AddTexture("textures/box0.bmp", 2);
+	unsigned int texIDs[3] =
+	{
+		textureIndex_box0,
+		textureIndex_cubeMap_daylightBox,
+		textureIndex_grass
+	};
 	unsigned int slots[3] = { 0 , 1, 2 };
-	AddShader("shaders/pickingShader");
-	AddShader("shaders/cubemapShader");
-	AddShader("shaders/basicShaderTex");
-	AddShader("shaders/basicShader");
 
-	AddTexture("textures/plane.png", 2);
-	AddTexture("textures/cubemaps/Daylight Box_", 3);
-	AddTexture("textures/grass.bmp", 2);
+	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
+	int materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
+	int materialIndex_grass = AddMaterial(texIDs + 2, slots + 2, 1);
 
-	AddMaterial(texIDs, slots, 1);
-	AddMaterial(texIDs + 1, slots + 1, 1);
-	AddMaterial(texIDs + 2, slots + 2, 1);
-	AddShape(Cube, -2, TRIANGLES);
-	AddShape(Cube, -1, TRIANGLES);
-	AddShape(Plane, -2, TRIANGLES, 1);
-	AddShape(Cube, -1, TRIANGLES);
-	SetShapeShader(0, 1);
-	SetShapeShader(1, 2);
-	SetShapeShader(2, 0);
-	SetShapeShader(3, 2);
-	SetShapeMaterial(0, 1);
-	SetShapeMaterial(1, 2);
-	SetShapeMaterial(2, 0);
-	SetShapeMaterial(3, 2);
-	selected_data_index = 0;
+	int sceneCube = AddShape(Cube, -2, TRIANGLES);
+	int scissorBox = AddShape(Plane, -2, TRIANGLES, 1);
+	int cube1 = AddShape(Cube, -1, TRIANGLES);
+	int cube2 = AddShape(Cube, -1, TRIANGLES);
+	SetShapeShader(sceneCube, shaderIndex_cubemap);
+	SetShapeShader(scissorBox, shaderIndex_picking);
+	SetShapeShader(cube1, shaderIndex_basic);
+	SetShapeShader(cube2, shaderIndex_basic);
+	SetShapeMaterial(sceneCube, materialIndex_cube);
+	SetShapeMaterial(scissorBox, materialIndex_basic);
+	SetShapeMaterial(cube1, materialIndex_grass);
+	SetShapeMaterial(cube2, materialIndex_grass);
+
+
+	selected_data_index = sceneCube;
 	float s = 60;
-	ShapeTransformation(scaleAll, s, 0);
-	SetShapeStatic(0);
-	selected_data_index = 2;
+	ShapeTransformation(scaleAll, s,0);
+	SetShapeStatic(sceneCube);
+	selected_data_index = scissorBox;
 	ShapeTransformation(zTranslate, -1.1, 1);
-	SetShapeStatic(2);
-	selected_data_index = 3;
+	SetShapeStatic(scissorBox);
+	selected_data_index = cube2;
 	ShapeTransformation(xTranslate, 2, 1);
+
 }
 
 void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx)
@@ -71,7 +86,7 @@ void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, c
 		BindMaterial(s, data_list[shapeIndx]->GetMaterial());
 	}
 	if (shaderIndx == 0)
-		s->SetUniform4f("lightColor", 0xc6/255.0f, 0x1e/255.0f, 0x24/255.0f, 0.5f);
+		s->SetUniform4f("lightColor", 0xc6 / 255.0f, 0x1e / 255.0f, 0x24 / 255.0f, 0.5f);
 	s->Unbind();
 }
 
@@ -99,6 +114,66 @@ void Project::ScaleAllShapes(float amt, int viewportIndx)
 		if (data_list[i]->Is2Render(viewportIndx))
 		{
 			data_list[i]->MyScale(Eigen::Vector3d(amt, amt, amt));
+		}
+	}
+}
+
+bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int viewportIndx) const
+{
+	auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(const_cast<igl::opengl::ViewerData*>(&data));
+	return (pAnimationCameraData == nullptr || EffectiveDesignModeView()) &&
+		Viewer::ShouldRenderViewerData(data, viewportIndx);
+}
+
+void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
+{
+	int cameraIndex = renderer->AddCamera(position, cameraData);
+	switch (kind)
+	{
+	case CameraKind::Design:
+		throw std::exception("Not implemented");
+		break;
+	case CameraKind::Animation:
+		int shapeIndex = AddShapeFromFile
+		(
+			"./data/arm.obj",
+			-1,
+			TRIANGLES,
+			[this, &cameraIndex]()
+			{
+				return new AnimationCameraData(currentEditingLayer, cameraIndex);
+			}
+		);
+		SetShapeShader(shapeIndex, shaderIndex_basic);
+		igl::opengl::ViewerData *shape = data_list[shapeIndex];
+		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
+		break;
+	}
+}
+
+void Project::CameraMeshHide(int cameraIndex)
+{
+	for (auto vd : data_list)
+	{
+		auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(vd);
+		if (pAnimationCameraData && pAnimationCameraData->cameraIndex == cameraIndex)
+		{
+			pAnimationCameraData->Hide();
+		}
+	}
+}
+
+void Project::CameraMeshUnhide(int cameraIndex, const Movable& transformations)
+{
+	for (auto vd : data_list)
+	{
+		auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(vd);
+		if (pAnimationCameraData && pAnimationCameraData->cameraIndex == cameraIndex)
+		{
+			pAnimationCameraData->SetPosition(transformations.GetPosition());
+			pAnimationCameraData->SetRotation(transformations.GetRotation());
+			pAnimationCameraData->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
+			pAnimationCameraData->UnHide();
 		}
 	}
 }
@@ -194,7 +269,7 @@ float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewpor
 		int closestShapeFaceIndex;
 		if (GetClosestIntersectingFace(mesh, meshView, sourcePointScene, dirToScene, closestIntersectionPoint, closestShapeFaceIndex)) {
 			Eigen::Vector4d transformed = meshView * closestIntersectionPoint.homogeneous();
-			if (closestShapeIndex == -1 || transformed(2) > closestFaceDist) {
+			if (closestShapeIndex == -1 || transformed(2) < closestFaceDist) {
 				closestShapeIndex = i;
 				closestFaceIndex = closestShapeFaceIndex;
 				closestFaceDist = transformed(2);

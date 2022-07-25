@@ -12,7 +12,7 @@ public:
 	Eigen::Vector4cf coeffs;
 	float x, y;
 	Assignment1();
-//	Assignment1(float angle,float relationWH,float near, float far);
+//	Assignment1(float angle,float relationWH,float zNear, float zFar);
 	void Init();
 	void Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx);
 	void WhenRotate();

@@ -4,6 +4,28 @@
 #include "stb_image.h"
 #include <iostream>
 
+void RectCopy
+(
+	unsigned char nChannels,
+	unsigned char *src, size_t srcWidth,
+	unsigned char *dest, size_t destWidth, size_t dsetHeight,
+	size_t xStartSrc, size_t yStartSrc
+)
+{
+	size_t xLimit = xStartSrc + destWidth;
+	size_t yLimit = yStartSrc + dsetHeight;
+	for (size_t y = yStartSrc; y < yLimit; ++y)
+	{
+		for (size_t x = xStartSrc; x < xLimit; ++x)
+		{
+			for (unsigned char c = 0; c < nChannels; ++c)
+			{
+				*dest++ = src[(y * srcWidth + x) * 4 + c];
+			}
+		}
+	}
+}
+
 Texture::Texture(const std::string& fileName, const int dim)
 {
 	int width, height, numComponents;
@@ -48,15 +70,55 @@ Texture::Texture(const std::string& fileName, const int dim)
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		std::string directions[] = { "Right","Left","Top","Bottom","Front","Back" };
-		for (int i = 0; i < 6; i++)
-		{
-			data = stbi_load((fileName + directions[i] + ".bmp").c_str(), &width, &height, &numComponents, 4);
-			if (data == NULL)
-				std::cerr << "Unable to load texture: " << fileName << std::endl;
 
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-		}
+		data = stbi_load(fileName.c_str(), &width, &height, &numComponents, 0);
+		int faceWidth = width / 4, faceHeight = height / 3;
+
+		unsigned char nChannels = static_cast<unsigned char>(numComponents);
+		unsigned char *buffer = new unsigned char[faceWidth * faceHeight * nChannels];
+
+		RectCopy(nChannels, data, width, buffer, faceWidth, faceHeight, faceWidth * 2, faceHeight);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 0, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+		RectCopy(nChannels, data, width, buffer, faceWidth, faceHeight, 0, faceHeight);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 1, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+		RectCopy(nChannels, data, width, buffer, faceWidth, faceHeight, faceWidth, 0);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 2, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+		RectCopy(nChannels, data, width, buffer, faceWidth, faceHeight, faceWidth, faceHeight * 2);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 3, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+		RectCopy(nChannels, data, width, buffer, faceWidth, faceHeight, faceWidth, faceHeight);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 4, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+		RectCopy(nChannels, data, width, buffer, faceWidth, faceHeight, faceWidth * 3, faceHeight);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 5, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+
+		delete[] buffer;
+
+		// glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 0, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		// err = glGetError();
+		// glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 1, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		// glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 2, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		// glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 3, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		// glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 4, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		// glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 5, 0, GL_RGBA, faceWidth, faceHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		// 
+		// glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 0, 0, faceWidth * 2, faceHeight, faceWidth, faceHeight, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		// 
+		// err = glGetError();
+		// 
+		// glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 1, 0, 0, faceHeight, faceWidth, faceHeight, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		// glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 2, 0, faceWidth, 0, faceWidth, faceHeight, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		// glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 3, 0, faceWidth, faceHeight * 2, faceWidth, faceHeight, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		// glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 4, 0, faceWidth, faceHeight, faceWidth, faceHeight, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		// glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 5, 0, faceWidth * 3, faceHeight, faceWidth, faceHeight, GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+		// std::string directions[] = { "Right","Left","Top","Bottom","Front","Back" };
+		// for (int y = 0; y < 6; y++)
+		// {
+		// 	data = stbi_load((fileName + directions[y] + ".bmp").c_str(), &width, &height, &numComponents, 4);
+		// 	if (data == NULL)
+		// 		std::cerr << "Unable to load texture: " << fileName << std::endl;
+		// 
+		// 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + y, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		// }
 	}
 	stbi_image_free(data);
 }
