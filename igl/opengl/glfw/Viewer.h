@@ -79,6 +79,8 @@ namespace glfw
       void ToggleLayerVisibility(int layer);
       int AddLayer();
 
+      void ChangeCubemapImage(std::string filePath);
+
       virtual int AddShape(int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
       IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int viewport = 0)
       {
@@ -259,6 +261,7 @@ public:
       void SetParent(int indx, int newValue, bool savePosition);
 
   protected:
+      int materialIndex_cube;
       virtual bool ShouldRenderViewerData(const ViewerData& data, const int viewportIndx) const;
   };
 

@@ -49,7 +49,7 @@ void Project::Init()
 	unsigned int slots[3] = { 0 , 1, 2 };
 
 	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
-	int materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
+	materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
 	int materialIndex_2 = AddMaterial(texIDs + 2, slots + 2, 1);
 	
 	int shapeIndex_cube = AddShape(Cube, -2, TRIANGLES);
@@ -67,7 +67,6 @@ void Project::Init()
 	SetShapeMaterial(shapeIndex_zCylinder1, materialIndex_basic);
 	SetShapeMaterial(shapeIndex_zCylinder2, materialIndex_basic);
 	SetShapeMaterial(shapeIndex_axis, materialIndex_basic);
-
 	SetShapeMaterial(shapeIndex_cube, materialIndex_cube);
 
 	selected_data_index = shapeIndex_cube;

@@ -124,6 +124,13 @@ namespace glfw
       return newLayer;
   }
 
+  void Viewer::ChangeCubemapImage(std::string filePath)
+  {
+      Material* cubemapMaterial = materials[materialIndex_cube];
+      int textureIndex = AddTexture(filePath, 3);
+      cubemapMaterial->ChangeTexture(0, textureIndex);
+  }
+
 IGL_INLINE bool
     Viewer::load_mesh_from_data(const Eigen::MatrixXd &V,
                                 const Eigen::MatrixXi &F,
@@ -330,7 +337,7 @@ IGL_INLINE bool
     if (fname.length() == 0)
       return;
     
-    this->load_mesh_from_file(fname.c_str());
+    this->load_mesh_from_file(fname);
   }
 
   IGL_INLINE void Viewer::open_dialog_save_mesh()
