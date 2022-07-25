@@ -36,11 +36,16 @@ void Project::Init()
 	
 
 	int textureIndex_plane = AddTexture("textures/plane.png", 2);
-	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box_", 3);
+	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box UV.png", 3);
 	int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
 	int textureIndex_box0 = AddTexture("textures/box0.bmp", 2);
 
-	unsigned int texIDs[3] = { textureIndex_box0, 1, 2 };
+	unsigned int texIDs[3] =
+	{
+		textureIndex_box0,
+		textureIndex_cubeMap_daylightBox,
+		textureIndex_grass
+	};
 	unsigned int slots[3] = { 0 , 1, 2 };
 
 	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
