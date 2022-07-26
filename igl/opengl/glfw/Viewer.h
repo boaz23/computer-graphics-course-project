@@ -59,7 +59,7 @@ namespace glfw
       enum axis { xAxis, yAxis, zAxis };
       enum transformations { xTranslate, yTranslate, zTranslate, xRotate, yRotate, zRotate, xScale, yScale, zScale,scaleAll,reset };
       enum modes { POINTS, LINES, LINE_LOOP, LINE_STRIP, TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN, QUADS };
-      enum shapes {Axis, xCylinder,yCylinder,zCylinder, Plane, Cube, Octahedron, Tethrahedron, LineCopy, MeshCopy, Sphere };
+      enum shapes {Axis, xCylinder,yCylinder,zCylinder, Plane, Cube, Octahedron, Tethrahedron, LineCopy, MeshCopy, Sphere, OtherShape };
       enum buffers { COLOR, DEPTH, STENCIL, BACK, FRONT, NONE };
     // UI Enumerations
    // enum class MouseButton {Left, Middle, Right};
@@ -84,15 +84,20 @@ namespace glfw
 
       void ChangeCubemapImage(std::string filePath);
 
-      virtual int AddShape(int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
-      IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int viewport = 0)
+  protected:
+      virtual int Viewer::InitSelectedShape(int type, int parent, unsigned int mode, int viewport, int shaderIndex);
+
+  public:
+      // TODO: Remove the viewport argument (add it manually in project)
+      int AddShape(int type, int parent, unsigned int mode, int shaderIndex, int viewport, const ViewerDataCreateFunc dataCreator);
+      IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int shaderIndex, int viewport)
       {
-          return AddShape(type, parent, mode, std::bind(&Viewer::DefualtViewerDataCreator, this), viewport);
+          return AddShape(type, parent, mode, viewport, shaderIndex, std::bind(&Viewer::DefualtViewerDataCreator, this));
       }
-      virtual int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
-      IGL_INLINE int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int viewport = 0)
+      int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, int viewport, const ViewerDataCreateFunc dataCreator);
+      IGL_INLINE int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, int viewport)
       {
-          return AddShapeFromFile(fileName, parent, mode, std::bind(&Viewer::DefualtViewerDataCreator, this), viewport);
+          return AddShapeFromFile(fileName, parent, mode, shaderIndex, viewport, std::bind(&Viewer::DefualtViewerDataCreator, this));
       }
       virtual void WhenTranslate(float dx, float dy) {}
       virtual void WhenRotate(float dx, float dy) {}

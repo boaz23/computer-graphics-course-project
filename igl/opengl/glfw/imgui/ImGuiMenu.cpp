@@ -218,28 +218,12 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
   }
 
   // Mesh
-  if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
+  if (project && ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
   {
-    if (ImGui::Button("Load##Mesh", fullWidthVec2))
+    if (project && ImGui::Button("Load##Mesh", fullWidthVec2))
     {
-        int savedIndx = viewer.selected_data_index;
-       // viewer.selected_data_index = viewer.parents.size();
-       // viewer.AddShape(viewer.xCylinder,-1,viewer.TRIANGLES);
-        viewer.open_dialog_load_mesh();
-      if (viewer.data_list.size() > viewer.parents.size())
-      {
-          
-          viewer.parents.push_back(-1);
-          viewer.SetShapeViewport(viewer.selected_data_index, 0);
-          viewer.SetShapeShader(viewer.selected_data_index, 2);
-          viewer.SetShapeMaterial(viewer.selected_data_index,0);
-          //viewer.data_list.back()->set_visible(false, 1);
-          //viewer.data_list.back()->set_visible(true, 2);
-          viewer.data_list.back()->UnHide();
-          viewer.data_list.back()->show_faces = 3;
-          viewer.data()->mode = viewer.TRIANGLES;
-          viewer.selected_data_index = savedIndx;
-      }
+      std::string filePath = igl::file_dialog_open();
+      project->AddShapeFromMenu(filePath);
     }
     //ImGui::SameLine(0, p);
     //if (ImGui::Button("Save##Mesh", halfWidthVec2))

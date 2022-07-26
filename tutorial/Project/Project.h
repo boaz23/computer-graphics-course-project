@@ -48,7 +48,9 @@ public:
 	void CameraMeshHide(int cameraIndex);
 	void CameraMeshUnhide(int cameraIndex, const Movable &transformations);
 
-	inline bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
+	IGL_INLINE bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
+
+	int AddShapeFromMenu(const std::string& filePath);
 	
 	float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y);
 	~Project(void);

@@ -59,15 +59,12 @@ void Project::Init()
 		std::pair<int, std::string>{materialIndex_bricks, "Bricks"}
 	};
 
-	int sceneCube = AddShape(Cube, -2, TRIANGLES);
-	int scissorBox = AddShape(Plane, -2, TRIANGLES, 1);
+	// TODO: window section (add to all)
+	int sceneCube = AddShape(Cube, -2, TRIANGLES, shaderIndex_cubemap, 0);
+	int scissorBox = AddShape(Plane, -2, TRIANGLES, shaderIndex_picking, 1);
 	data_list[scissorBox]->layer = 0;
-	int cube1 = AddShape(Cube, -1, TRIANGLES);
-	int cube2 = AddShape(Cube, -1, TRIANGLES);
-	SetShapeShader(sceneCube, shaderIndex_cubemap);
-	SetShapeShader(scissorBox, shaderIndex_picking);
-	SetShapeShader(cube1, shaderIndex_basic);
-	SetShapeShader(cube2, shaderIndex_basic);
+	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, 0);
+	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, 0);
 	SetShapeMaterial(sceneCube, materialIndex_cube);
 	//SetShapeMaterial(scissorBox, materialIndex_box0);
 	SetShapeMaterial(cube1, materialIndex_grass);
@@ -140,6 +137,17 @@ bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const 
 		Viewer::ShouldRenderViewerData(data, viewportIndx);
 }
 
+int Project::AddShapeFromMenu(const std::string& filePath)
+{
+	if (filePath.length() == 0)
+	{
+		return -1;
+	}
+
+	// TODO: window section (add to all)
+	return AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, 0);
+}
+
 void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
 {
 	int cameraIndex = renderer->AddCamera(position, cameraData);
@@ -149,17 +157,19 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 		throw std::exception("Not implemented");
 		break;
 	case CameraKind::Animation:
+		// TODO: window section (add to all)
 		int shapeIndex = AddShapeFromFile
 		(
-			"./data/arm.obj",
+			"./data/arm.obj", // TODO: find a better mesh
 			-1,
 			TRIANGLES,
+			shaderIndex_basic,
+			0,
 			[this, &cameraIndex]()
 			{
 				return new AnimationCameraData(currentEditingLayer, cameraIndex);
 			}
 		);
-		SetShapeShader(shapeIndex, shaderIndex_basic);
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
 		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
 		break;
