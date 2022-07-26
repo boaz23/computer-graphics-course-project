@@ -834,7 +834,6 @@ IGL_INLINE bool
 
     int Viewer::AddTexture(const std::string& textureFileName, int dim)
     {
-        //std::string canonicalPath = textureFileName;
         bool c;
         std::string canonicalPath = CanonicalizePath(textureFileName, &c);
         auto fileTextures = textureCache.find(canonicalPath);
