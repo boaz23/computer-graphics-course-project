@@ -8,6 +8,9 @@
 
 	void glfw_mouse_callback(GLFWwindow* window,int button, int action, int mods)
 	{	
+		if (ImGui::GetIO().WantCaptureMouse) {
+			return;
+		}
 		bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
@@ -65,6 +68,9 @@
 	
 	void glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 	{
+		if (ImGui::GetIO().WantCaptureMouse) {
+			return;
+		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
 
@@ -98,6 +104,9 @@
 	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta);
 	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
+		if (ImGui::GetIO().WantCaptureKeyboard) {
+			return;
+		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
 		if (action == GLFW_PRESS || action == GLFW_REPEAT)

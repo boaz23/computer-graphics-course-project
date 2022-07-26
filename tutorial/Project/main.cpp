@@ -25,7 +25,7 @@ int main(int argc,char *argv[])
 	rndr->SetDrawFlag(2, rndr->blend | rndr->inAction2 | rndr->scissorTest);
 
 	rndr->AddViewport(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-	rndr->AddDraw(2, 0, 0, 0, rndr->inAction | rndr->depthTest | rndr->blend | rndr->clearStencil | rndr->passStencil | rndr->onPicking | rndr->stencilTest | rndr->scaleAbit);
+	rndr->AddDraw(2, 0, 0, 0, rndr->inAction | rndr->onPicking | rndr->stencilTest | rndr->scaleAbit | rndr->stencil2);
     disp.launch_rendering(rndr);
 
 	delete scn;
