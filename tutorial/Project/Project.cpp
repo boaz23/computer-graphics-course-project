@@ -250,6 +250,7 @@ bool GetClosestIntersectingFace(igl::opengl::ViewerData* mesh, const Eigen::Matr
 }
 
 float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y) {
+	// TODO section
 	ClearPickedShapes(pickingViewport);
 	y = viewportDims(3) - y;
 	float viewportf[] = { viewportDims(0), viewportDims(1), viewportDims(2), viewportDims(3) };
@@ -259,7 +260,7 @@ float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewpor
 	float closestFaceDist = -1;
 	for (int i = 1; i < data_list.size(); i++) {
 		igl::opengl::ViewerData* mesh = data_list[i];
-		if (!mesh->Is2Render(viewport)) {
+		if (!ShouldRenderViewerData(*mesh, viewport)) {
 			continue;
 		}
 		Eigen::Matrix4d meshView = sceneView * mesh->MakeTransScaled();

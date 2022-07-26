@@ -23,7 +23,8 @@
 				rndr->Pressed();
 			// if not in select many mode and shift not pressed -> single picking
 			if (!shiftPressed && !rndr->IsMany()) {
-				if (rndr->Picking((int)x2, (int)y2))
+				// TODO this need to be camera per section
+				if (rndr->Picking((int)x2, (int)y2, scn->selectedCameraIndex))
 				{
 					rndr->UpdatePosition(x2, y2);
 				}
@@ -38,13 +39,13 @@
 			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 			// if exiting select many mode apply selection
 			if (rndr->isInSelectMode()) {
-				rndr->PickMany(2);
+				rndr->PickMany((int)x2, (int)y2, scn->selectedCameraIndex);
 				rndr->finishSelect();
 			}
 			else {
 				// if not in selection mode but many picked check if this is a click or drag and 
 				// single pick if click(else nothing will happend and usual drag will continue)
-				rndr->TrySinglePicking((int)x2, (int)y2);
+				rndr->TrySinglePicking((int)x2, (int)y2, scn->selectedCameraIndex);
 			}
 		}
 	}
@@ -57,7 +58,8 @@
 		if (rndr->IsPicked())
 		{
 			rndr->UpdateZpos((int)yoffset);
-			rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE);
+			//  TODO section
+			rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE, scn->selectedCameraIndex);
 		}
 		else
 		{
@@ -76,18 +78,21 @@
 
 		rndr->UpdatePosition((float)xpos,(float)ypos);
 
-		if (rndr->CheckViewport(xpos,ypos, 0))
+		// TODO section
+		if (rndr->CheckViewport(xpos, ypos, 0))
 		{
 			bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
 			if (!shiftPressed)
 			{
 				if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
 				{
-					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT);
+					// TODO section
+					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT, scn->selectedCameraIndex);
 				}
 				else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
 				{
-					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_LEFT);
+					// TODO section
+					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_LEFT, scn->selectedCameraIndex);
 				}
 			}
 		}
@@ -186,8 +191,10 @@
 
 	void SetDrawCamera_DefaultViewport(Renderer* rndr, Project* scn, int cameraIndex)
 	{
-		rndr->GetDrawInfo(0).cameraIndx = cameraIndex;
-		rndr->GetDrawInfo(1).cameraIndx = cameraIndex;
+		// TODO section
+		for (int i = 0; i < 4; i++) {
+			rndr->GetDrawInfo(i).cameraIndx = cameraIndex;
+		}
 	}
 
 	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta)

@@ -110,8 +110,6 @@ public:
 		return scn;
 	}
 
-	void TranslateCamera(Eigen::Vector3f amt);
-
     float UpdatePosition(float xpos, float ypos);
 
     void UpdatePress(float xpos, float ypos);
@@ -135,13 +133,13 @@ public:
 
     void MoveCamera(int cameraIndx, int type, float amt);
 
-    bool Picking(int x, int y);
+    bool Picking(int x, int y, int cameraIndex);
 
     void OutLine();
 
-    void PickMany(int viewportIndx);
+    void PickMany(int x, int y, int cameraIndex);
 
-    void MouseProccessing(int button, int mode = 0, int viewportIndx = 0);
+    void MouseProccessing(int button, int cameraIndex);
 
     inline size_t CamerasCount() const { return cameras.size(); }
 
@@ -201,7 +199,7 @@ public:
     inline void finishSelect() {
         isSelecting = false;
     }
-    bool TrySinglePicking(int x, int y);
+    bool TrySinglePicking(int x, int y, int cameraIndex);
 
 
 private:
