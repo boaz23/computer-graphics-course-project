@@ -23,7 +23,6 @@
 //#include <imgui_fonts_droid_sans.h>
 //#include <GLFW/glfw3.h>
 #include <iostream>
-#include <string.h>
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace igl
@@ -248,7 +247,7 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
     //  viewer.open_dialog_save_mesh();
     //}
 
-    if (project && viewer.pShapes.size() == 1)
+    if (project && viewer.pShapes.size() > 0)
     {
         ImGui::PushItemWidth(100 * menu_scaling());
 
@@ -256,16 +255,62 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
         ImGui::SameLine(0, p);
 
         static int selectedMaterialComboIndex = 0;
-        bool(*items_getter)(void*, int, const char**) = [](void* data, int idx, const char** out_text)
+        auto& availableMaterials = project->availableMaterials;
+
+        bool allSameLayer = viewer.AllPickedShapesSameValue<unsigned int>([](const igl::opengl::ViewerData& shape)
+            {
+                return shape.GetMaterial();
+            });
+        bool fieldChanged{ false };
+        int materialComboIndex{ -1 };
+        if (allSameLayer)
         {
-            auto availableMaterials = reinterpret_cast<decltype(project->availableMaterials)*>(data);
-            auto materialPair = (*availableMaterials)[idx];
-            *out_text = strdup(materialPair.second.c_str());
-            return true;
-        };
-        if (ImGui::Combo("##material", &selectedMaterialComboIndex, items_getter, &project->availableMaterials, project->availableMaterials.size()))
+            unsigned int commonMaterialIndex = viewer.GetViewerDataAt(viewer.pShapes[0]).GetMaterial();
+            for (size_t i = 0; i < availableMaterials.size(); ++i)
+            {
+                const auto& materialPair = availableMaterials[i];
+                if (materialPair.first == commonMaterialIndex)
+                {
+                    materialComboIndex = i;
+                    break;
+                }
+            }
+
+            if (selectedMaterialComboIndex != materialComboIndex)
+            {
+                selectedMaterialComboIndex = materialComboIndex;
+                fieldChanged = true;
+            }
+        }
+
+        const std::string& materialComboPreview = allSameLayer ? availableMaterials[materialComboIndex].second : "";
+        if (ImGui::BeginCombo("##material", materialComboPreview.c_str()))
         {
-            viewer.SetShapeMaterial(viewer.pShapes[0], project->availableMaterials[selectedMaterialComboIndex].first);
+            bool valueChanged{ false };
+            for (size_t i = 0; i < availableMaterials.size(); ++i)
+            {
+                const bool item_selected = i == selectedMaterialComboIndex && allSameLayer;
+                const char* item_text = availableMaterials[i].second.c_str();
+                if (ImGui::Selectable(item_text, item_selected))
+                {
+                    valueChanged = true;
+                    selectedMaterialComboIndex = i;
+                }
+                if (item_selected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+
+            if (valueChanged && !fieldChanged)
+            {
+                int materialIndex = availableMaterials[selectedMaterialComboIndex].first;
+                for (int shapeIndex : viewer.pShapes)
+                {
+                    viewer.SetShapeMaterial(shapeIndex, materialIndex);
+                }
+            }
         }
 
         ImGui::PopItemWidth();
