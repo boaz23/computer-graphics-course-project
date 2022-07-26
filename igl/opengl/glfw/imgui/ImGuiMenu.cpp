@@ -231,7 +231,7 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
     //  viewer.open_dialog_save_mesh();
     //}
 
-    if (project && viewer.pShapes.size() > 0)
+    if (project)
     {
         ImGui::PushItemWidth(100 * menu_scaling());
 
@@ -241,7 +241,8 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
         static int selectedMaterialComboIndex = 0;
         auto& availableMaterials = project->availableMaterials;
 
-        bool allSameLayer = viewer.AllPickedShapesSameValue<unsigned int>([](const igl::opengl::ViewerData& shape)
+        bool allSameLayer = viewer.pShapes.size() == 0 ? false :
+            viewer.AllPickedShapesSameValue<unsigned int>([](const igl::opengl::ViewerData& shape)
             {
                 return shape.GetMaterial();
             });
@@ -340,21 +341,24 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
           }
       }
 
-      if (viewer.pShapes.size() > 0)
       {
-          ImGui::Text("Object%s layer:", viewer.pShapes.size() == 1 ? "" : "s");
+          ImGui::Text("Object%s layer:", viewer.pShapes.size() <= 1 ? "" : "s");
           ImGui::SameLine(0, p);
           int& layerField = viewer.currentObjectLayer;
-          bool allSameLayer = viewer.AllPickedShapesSameValue<int>([](const igl::opengl::ViewerData& shape)
+          bool allSameLayer = viewer.pShapes.size() == 0 ? false :
+              viewer.AllPickedShapesSameValue<int>([](const igl::opengl::ViewerData& shape)
               {
                   return shape.layer;
               });
-          int commonLayer = viewer.GetViewerDataAt(viewer.pShapes[0]).layer;
           bool fieldChanged{ false };
-          if (allSameLayer && layerField != commonLayer)
+          if (allSameLayer)
           {
-              layerField = commonLayer;
-              fieldChanged = true;
+              int commonLayer = viewer.GetViewerDataAt(viewer.pShapes[0]).layer;
+              if (layerField != commonLayer)
+              {
+                  layerField = commonLayer;
+                  fieldChanged = true;
+              }
           }
           int prevObjectLayer = layerField;
           ImGuiInputTextCallback callback = [](ImGuiInputTextCallbackData* data)
