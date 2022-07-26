@@ -186,7 +186,6 @@ public:
 	std::vector<int> parents;
     std::vector<Texture*> textures;
     std::vector<Material*> materials;
-    std::list<int> pickedShapes;
     Eigen::Vector3d pickedNormal;
     int selected_data_index;
     int next_data_id;
@@ -279,7 +278,7 @@ public:
 
       virtual float
           Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y);
-      inline void UnPick() { selected_data_index = -1; pickedShapes.clear(); }
+      inline void UnPick() { selected_data_index = -1; pShapes.clear(); }
 
       bool load_mesh_from_data(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const Eigen::MatrixXd &UV_V,
                                const Eigen::MatrixXi &UV_F, const ViewerDataCreateFunc dataCreator);

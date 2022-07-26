@@ -24,6 +24,7 @@ void Project::Init()
 {		
 	Viewer::AddLayer();
 	Viewer::AddLayer();
+
 	int shaderIndex_picking = AddShader("shaders/pickingShader");
 	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
 	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
@@ -47,6 +48,7 @@ void Project::Init()
 
 	int sceneCube = AddShape(Cube, -2, TRIANGLES);
 	int scissorBox = AddShape(Plane, -2, TRIANGLES, 1);
+	data_list[scissorBox]->layer = 0;
 	int cube1 = AddShape(Cube, -1, TRIANGLES);
 	int cube2 = AddShape(Cube, -1, TRIANGLES);
 	SetShapeShader(sceneCube, shaderIndex_cubemap);
