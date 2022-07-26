@@ -34,17 +34,23 @@ void Project::Init()
 	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box UV.png", 3);
 	int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
 	int textureIndex_box0 = AddTexture("textures/box0.bmp", 2);
-	unsigned int texIDs[3] =
+	int textureIndex_bricks = AddTexture("textures/bricks.jpg", 2);
+
+	unsigned int texIDs[] =
 	{
 		textureIndex_box0,
 		textureIndex_cubeMap_daylightBox,
-		textureIndex_grass
+		textureIndex_grass,
+		textureIndex_plane,
+		textureIndex_bricks,
 	};
-	unsigned int slots[3] = { 0 , 1, 2 };
+	unsigned int slots[] = { 0, 1, 2, 3, 4 };
 
-	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
+	int materialIndex_box0 = AddMaterial(texIDs + 0, slots + 0, 1);
 	materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
 	int materialIndex_grass = AddMaterial(texIDs + 2, slots + 2, 1);
+	int materialIndex_plane = AddMaterial(texIDs + 3, slots + 3, 1);
+	int materialIndex_bricks = AddMaterial(texIDs + 4, slots + 4, 1);
 
 	int sceneCube = AddShape(Cube, -2, TRIANGLES);
 	int scissorBox = AddShape(Plane, -2, TRIANGLES, 1);
@@ -56,9 +62,9 @@ void Project::Init()
 	SetShapeShader(cube1, shaderIndex_basic);
 	SetShapeShader(cube2, shaderIndex_basic);
 	SetShapeMaterial(sceneCube, materialIndex_cube);
-	SetShapeMaterial(scissorBox, materialIndex_basic);
+	//SetShapeMaterial(scissorBox, materialIndex_box0);
 	SetShapeMaterial(cube1, materialIndex_grass);
-	SetShapeMaterial(cube2, materialIndex_grass);
+	SetShapeMaterial(cube2, materialIndex_box0);
 
 
 	selected_data_index = sceneCube;
