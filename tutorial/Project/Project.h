@@ -47,6 +47,7 @@ public:
 
 	inline bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
 	
+	float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y);
 	~Project(void);
 
 protected:
