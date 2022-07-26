@@ -70,7 +70,9 @@ namespace glfw
 	isActive(false),
       renderer{nullptr},
       layers{},
-      currentEditingLayer{1}
+      currentEditingLayer{1},
+      currentObjectLayer{1},
+      isEditingObjectLayer{false}
   {
     data_list.front() = new ViewerData();
     data_list.front()->id = 0;

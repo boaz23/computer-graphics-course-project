@@ -250,37 +250,94 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
 
   if (ImGui::CollapsingHeader("Layers", ImGuiTreeNodeFlags_DefaultOpen))
   {
+      ImGui::PushItemWidth(80 * menu_scaling());
+
       if (ImGui::Button("Add layer", fullWidthVec2))
       {
           viewer.AddLayer();
       }
 
-      ImGui::Text("Layer:");
-      ImGui::SameLine(0, p);
-      ImGui::PushItemWidth(80 * menu_scaling());
-      int prevEditingLayer = viewer.currentEditingLayer;
       int maxLayer = viewer.LayersCount() - 1;
-      if (ImGui::InputInt("", &viewer.currentEditingLayer))
+      const int step = 1, step_fast = 5;
+
       {
-          if (viewer.currentEditingLayer < 1 || viewer.currentEditingLayer > maxLayer)
+          ImGui::Text("Editing layer:");
+          ImGui::SameLine(0, p);
+          int& layerField = viewer.currentEditingLayer;
+          int prevEditingLayer = layerField;
+          if (ImGui::InputInt("##editingLayer", &layerField, step, step_fast))
           {
-              viewer.currentEditingLayer = prevEditingLayer;
+              if (layerField < 1 || layerField > maxLayer)
+              {
+                  layerField = prevEditingLayer;
+              }
+          }
+          ImGui::SameLine(0, 0);
+          ImGui::Text(" / %d", maxLayer);
+
+          bool isCurrentLayerHidden = viewer.IsLayerHidden(layerField);
+
+          ImGui::Text("State:");
+          ImGui::SameLine(0, p);
+          ImGui::Text(isCurrentLayerHidden ? "Hidden" : "Shown");
+
+          if (ImGui::Button(isCurrentLayerHidden ? "Show layer" : "Hide layer", fullWidthVec2))
+          {
+              viewer.ToggleLayerVisibility(layerField);
           }
       }
-      ImGui::SameLine(0, 0);
-      ImGui::Text(" / %d", maxLayer);
-      ImGui::PopItemWidth();
 
-      bool isCurrentLayerHidden = viewer.IsLayerHidden(viewer.currentEditingLayer);
-
-      ImGui::Text("State:");
-      ImGui::SameLine(0, p);
-      ImGui::Text(isCurrentLayerHidden ? "Hidden" : "Shown");
-
-      if (ImGui::Button(isCurrentLayerHidden ? "Show layer" : "Hide layer", fullWidthVec2))
+      if (viewer.pShapes.size() > 0)
       {
-          viewer.ToggleLayerVisibility(viewer.currentEditingLayer);
+          ImGui::Text("Object%s layer:", viewer.pShapes.size() == 1 ? "" : "s");
+          ImGui::SameLine(0, p);
+          int& layerField = viewer.currentObjectLayer;
+          bool allSameLayer = viewer.AllPickedShapesSameValue<int>([](const igl::opengl::ViewerData& shape)
+              {
+                  return shape.layer;
+              });
+          int commonLayer = viewer.GetViewerDataAt(viewer.pShapes[0]).layer;
+          bool fieldChanged{ false };
+          if (allSameLayer && layerField != commonLayer)
+          {
+              layerField = commonLayer;
+              fieldChanged = true;
+          }
+          int prevObjectLayer = layerField;
+          ImGuiInputTextCallback callback = [](ImGuiInputTextCallbackData* data)
+          {
+              auto viewer = static_cast<igl::opengl::glfw::Viewer*>(data->UserData);
+              viewer->isEditingObjectLayer = true;
+              return 0;
+          };
+          if
+          (
+              ImGui::InputScalar
+              (
+                "##objectLayer", ImGuiDataType_S32, (void*)&layerField,
+                (void*)&step, (void*)&step_fast,
+                (allSameLayer || viewer.isEditingObjectLayer) ? "%d" : "",
+                ImGuiInputTextFlags_CallbackEdit,
+                callback, &viewer
+              ) && !fieldChanged
+          )
+          {
+              viewer.isEditingObjectLayer = false;
+               if (layerField < 1 || layerField > maxLayer)
+               {
+                   layerField = prevObjectLayer;
+               }
+               for (int shapeIndex : viewer.pShapes)
+               {
+                   igl::opengl::ViewerData& shape = viewer.GetViewerDataAt(shapeIndex);
+                   shape.layer = layerField;
+               }
+          }
+          ImGui::SameLine(0, 0);
+          ImGui::Text(" / %d", maxLayer);
       }
+
+      ImGui::PopItemWidth();
   }
 
   // Viewing options
@@ -319,12 +376,15 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
 //      ImGui::PopItemWidth();
 //  }
 
-  if (ImGui::Button("Change cubemap image", fullWidthVec2))
+  if (ImGui::CollapsingHeader("Cubemap", ImGuiTreeNodeFlags_DefaultOpen))
   {
-      std::string filePath = igl::file_dialog_open();
-      if (filePath.length() > 0)
+      if (ImGui::Button("Change image", fullWidthVec2))
       {
-          viewer.ChangeCubemapImage(filePath);
+          std::string filePath = igl::file_dialog_open();
+          if (filePath.length() > 0)
+          {
+              viewer.ChangeCubemapImage(filePath);
+          }
       }
   }
 

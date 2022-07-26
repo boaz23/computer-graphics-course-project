@@ -53,6 +53,8 @@ namespace glfw
       Renderer* renderer;
       std::vector<bool> layers;
       int currentEditingLayer;
+      int currentObjectLayer;
+      bool isEditingObjectLayer;
 
       enum axis { xAxis, yAxis, zAxis };
       enum transformations { xTranslate, yTranslate, zTranslate, xRotate, yRotate, zRotate, xScale, yScale, zScale,scaleAll,reset };
@@ -128,6 +130,8 @@ namespace glfw
     //   mesh_id  unique identifier associated to the desired mesh (current mesh if -1)
     IGL_INLINE ViewerData* data(int mesh_id = -1);
     IGL_INLINE const ViewerData* data(int mesh_id = -1) const;
+    IGL_INLINE ViewerData& GetViewerDataAt(int index) { return *data_list[index]; }
+    IGL_INLINE const ViewerData& GetViewerDataAt(int index) const { return *data_list[index]; }
 
     // Append a new "slot" for a mesh (i.e., create empty entries at the end of
     // the data_list and opengl_state_list.
@@ -224,6 +228,27 @@ public:
       float
       AddPickedShapes(const Eigen::Matrix4d &PV, const Eigen::Vector4i &viewport, int viewportIndx, int left, int right,
                       int up, int bottom, int newViewportIndx);
+
+      template<typename T> bool AllPickedShapesSameValue(std::function<T(const ViewerData&)> valueFunc) const
+      {
+          if (pShapes.size() <= 1)
+          {
+              return true;
+          }
+
+          T prevValue = valueFunc(GetViewerDataAt(pShapes[0]));
+          for (auto &it = pShapes.begin() + 1; it < pShapes.end(); ++it)
+          {
+              T value = valueFunc(GetViewerDataAt(*it));
+              if (prevValue != value)
+              {
+                  return false;
+              }
+              prevValue = value;
+          }
+
+          return true;
+      }
 
       void
       MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat, int viewportIndx);
