@@ -1,4 +1,5 @@
 #pragma once
+#include <utility>
 #include "igl/opengl/glfw/Viewer.h"
 #include "igl/opengl/Camera.h"
 
@@ -31,6 +32,8 @@ public:
 	/// Whether the view in design mode shows design mode artifacts or only scene objects
 	/// </summary>
 	bool isDesignModeView;
+
+	std::array<std::pair<int, std::string>, 4> availableMaterials;
 
 	Project();
 //	Project(float angle,float relationWH,float zNear, float zFar);

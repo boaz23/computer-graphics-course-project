@@ -23,6 +23,7 @@
 //#include <imgui_fonts_droid_sans.h>
 //#include <GLFW/glfw3.h>
 #include <iostream>
+#include <string.h>
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace igl
@@ -220,7 +221,7 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
   // Mesh
   if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
   {
-    if (ImGui::Button("Load##Mesh", halfWidthVec2))
+    if (ImGui::Button("Load##Mesh", fullWidthVec2))
     {
         int savedIndx = viewer.selected_data_index;
        // viewer.selected_data_index = viewer.parents.size();
@@ -241,10 +242,33 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
           viewer.selected_data_index = savedIndx;
       }
     }
-    ImGui::SameLine(0, p);
-    if (ImGui::Button("Save##Mesh", halfWidthVec2))
+    //ImGui::SameLine(0, p);
+    //if (ImGui::Button("Save##Mesh", halfWidthVec2))
+    //{
+    //  viewer.open_dialog_save_mesh();
+    //}
+
+    if (project && viewer.pShapes.size() == 1)
     {
-      viewer.open_dialog_save_mesh();
+        ImGui::PushItemWidth(100 * menu_scaling());
+
+        ImGui::Text("Material:");
+        ImGui::SameLine(0, p);
+
+        static int selectedMaterialComboIndex = 0;
+        bool(*items_getter)(void*, int, const char**) = [](void* data, int idx, const char** out_text)
+        {
+            auto availableMaterials = reinterpret_cast<decltype(project->availableMaterials)*>(data);
+            auto materialPair = (*availableMaterials)[idx];
+            *out_text = strdup(materialPair.second.c_str());
+            return true;
+        };
+        if (ImGui::Combo("##material", &selectedMaterialComboIndex, items_getter, &project->availableMaterials, project->availableMaterials.size()))
+        {
+            viewer.SetShapeMaterial(viewer.pShapes[0], project->availableMaterials[selectedMaterialComboIndex].first);
+        }
+
+        ImGui::PopItemWidth();
     }
   }
 

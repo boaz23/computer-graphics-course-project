@@ -51,6 +51,13 @@ void Project::Init()
 	int materialIndex_grass = AddMaterial(texIDs + 2, slots + 2, 1);
 	int materialIndex_plane = AddMaterial(texIDs + 3, slots + 3, 1);
 	int materialIndex_bricks = AddMaterial(texIDs + 4, slots + 4, 1);
+	availableMaterials =
+	{
+		std::pair<int, std::string>{materialIndex_box0, "Box"},
+		std::pair<int, std::string>{materialIndex_grass, "Grass"},
+		std::pair<int, std::string>{materialIndex_plane, "Plane"},
+		std::pair<int, std::string>{materialIndex_bricks, "Bricks"}
+	};
 
 	int sceneCube = AddShape(Cube, -2, TRIANGLES);
 	int scissorBox = AddShape(Plane, -2, TRIANGLES, 1);
