@@ -110,8 +110,6 @@ public:
 		return scn;
 	}
 
-	void TranslateCamera(Eigen::Vector3f amt);
-
     float UpdatePosition(float xpos, float ypos);
 
     void UpdatePress(float xpos, float ypos);
@@ -135,13 +133,13 @@ public:
 
     void MoveCamera(int cameraIndx, int type, float amt);
 
-    bool Picking(int x, int y);
+    bool Picking(int x, int y, int cameraIndex);
 
     void OutLine();
 
-    void PickMany(int viewportIndx);
+    void PickMany(int x, int y, int cameraIndex);
 
-    void MouseProccessing(int button, int mode = 0, int viewportIndx = 0);
+    void MouseProccessing(int button, int cameraIndex);
 
     inline size_t CamerasCount() const { return cameras.size(); }
 
@@ -183,12 +181,25 @@ public:
     }
 
     inline void UnPick(int viewportIndx) {
+        // Changed: clear isMany also
         isPicked = false;
+        isMany = false;
         scn->ClearPickedShapes(viewportIndx);
     }
     inline bool IsPicked() { return isPicked; }
     inline bool IsMany() const { return isMany; }
     void Init(igl::opengl::glfw::Viewer *scene, std::list<int> xViewport, std::list<int> yViewport, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
+    // Added: functions for selection mode and to try single pick
+    bool isInSelectMode() {
+        return isSelecting;
+    }
+    inline void StartSelect() {
+        isSelecting = true;
+    }
+    inline void finishSelect() {
+        isSelecting = false;
+    }
+    bool TrySinglePicking(int x, int y, int cameraIndex);
 
 
 private:
@@ -206,6 +217,8 @@ private:
     int xWhenPress, yWhenPress;
     bool isMany;
     bool isPicked;
+    // Added: added selection flag
+    bool isSelecting;
     int materialIndx2D;
     bool isPressed;
     int currentViewport;

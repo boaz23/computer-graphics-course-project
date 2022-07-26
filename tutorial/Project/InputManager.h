@@ -8,30 +8,45 @@
 
 	void glfw_mouse_callback(GLFWwindow* window,int button, int action, int mods)
 	{	
+		if (ImGui::GetIO().WantCaptureMouse) {
+			return;
+		}
+		bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
+		Project* scn = (Project*)rndr->GetScene();
+		double x2, y2;
+		glfwGetCursorPos(window, &x2, &y2);
 		if (action == GLFW_PRESS)
 		{
-			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
-			Project* scn = (Project*)rndr->GetScene();
-			double x2, y2;
-			
-			glfwGetCursorPos(window, &x2, &y2);
 			rndr->UpdatePress(x2, y2);
-			if (rndr->Picking((int)x2, (int)y2))
-			{
-				rndr->UpdatePosition(x2, y2);
-				if(button == GLFW_MOUSE_BUTTON_LEFT)
-					rndr->Pressed();
+			if (button == GLFW_MOUSE_BUTTON_LEFT)
+				rndr->Pressed();
+			// if not in select many mode and shift not pressed -> single picking
+			if (!shiftPressed && !rndr->IsMany()) {
+				// TODO this need to be camera per section
+				if (rndr->Picking((int)x2, (int)y2, scn->selectedCameraIndex))
+				{
+					rndr->UpdatePosition(x2, y2);
+				}
 			}
-			else
-			{
-				rndr->UnPick(2);
+			// start select many mode
+			else if (shiftPressed) {
+				rndr->StartSelect();
 			}
-		
 		}
 		else
 		{
 			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
-			rndr->UnPick(2);
+			// if exiting select many mode apply selection
+			if (rndr->isInSelectMode()) {
+				rndr->PickMany((int)x2, (int)y2, scn->selectedCameraIndex);
+				rndr->finishSelect();
+			}
+			else {
+				// if not in selection mode but many picked check if this is a click or drag and 
+				// single pick if click(else nothing will happend and usual drag will continue)
+				rndr->TrySinglePicking((int)x2, (int)y2, scn->selectedCameraIndex);
+			}
 		}
 	}
 	
@@ -39,41 +54,42 @@
 	{
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
-		
 		if (rndr->IsPicked())
 		{
 			rndr->UpdateZpos((int)yoffset);
-			rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE);
+			//  TODO section
+			// TODO zoom on object 
+			rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE, scn->selectedCameraIndex);
 		}
-		else
-		{
-			rndr->MoveCamera(scn->selectedCameraIndex, rndr->zTranslate, (float)yoffset);
-		}
-		
 	}
 	
 	void glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 	{
+		if (ImGui::GetIO().WantCaptureMouse) {
+			return;
+		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
 
 		rndr->UpdatePosition((float)xpos,(float)ypos);
 
-		if (rndr->CheckViewport(xpos,ypos, 0))
+		// TODO section
+		if (rndr->CheckViewport(xpos, ypos, 0))
 		{
-			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+			bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+			if (!shiftPressed)
 			{
-
-				rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT);
+				if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+				{
+					// TODO section
+					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT, scn->selectedCameraIndex);
+				}
+				else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+				{
+					// TODO section
+					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_LEFT, scn->selectedCameraIndex);
+				}
 			}
-			else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-			{
-				
-				rndr->MouseProccessing(GLFW_MOUSE_BUTTON_LEFT);
-			}
-			else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_RELEASE && rndr->IsPicked() && rndr->IsMany())
-					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT);
-
 		}
 	}
 
@@ -88,17 +104,18 @@
 	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta);
 	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
+		if (ImGui::GetIO().WantCaptureKeyboard) {
+			return;
+		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
-		//rndr->FreeShapes(2);
 		if (action == GLFW_PRESS || action == GLFW_REPEAT)
 		{
 			switch (key)
 			{
 			case GLFW_KEY_ESCAPE:
-				glfwSetWindowShouldClose(window, GLFW_TRUE);
+				rndr->UnPick(2);
 				break;
-				
 			case GLFW_KEY_SPACE:
 				if (scn->IsActive())
 					scn->Deactivate();
@@ -169,8 +186,10 @@
 
 	void SetDrawCamera_DefaultViewport(Renderer* rndr, Project* scn, int cameraIndex)
 	{
-		rndr->GetDrawInfo(0).cameraIndx = cameraIndex;
-		rndr->GetDrawInfo(1).cameraIndx = cameraIndex;
+		// TODO section
+		for (int i = 0; i < 4; i++) {
+			rndr->GetDrawInfo(i).cameraIndx = cameraIndex;
+		}
 	}
 
 	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta)

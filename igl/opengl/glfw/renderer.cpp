@@ -45,6 +45,8 @@ Renderer::Renderer(igl::opengl::CameraData cameraData)
     zrel = 0;
     currentViewport = 0;
     isPicked = false;
+    // Added: flag for selection mode
+    isSelecting = false;
 }
 
 
@@ -115,6 +117,7 @@ IGL_INLINE void Renderer::draw_by_info(int info_index){
     else
         glDisable(GL_BLEND);
 
+    // TODO section index
     Eigen::Matrix4f Proj = cameras[info->cameraIndx]->GetViewProjection().cast<float>();
     Eigen::Matrix4f View = cameras[info->cameraIndx]->MakeTransScaled().inverse().cast<float>();
 
@@ -125,7 +128,6 @@ IGL_INLINE void Renderer::draw_by_info(int info_index){
         else
             Clear(info->Clear_RGBA.x(), info->Clear_RGBA.y(), info->Clear_RGBA.z(), info->Clear_RGBA.w(),info->flags);
     }
-
     scn->Draw(info->shaderIndx, Proj, View, info->viewportIndx, info->flags,info->property_id);
 }
 
@@ -155,7 +157,8 @@ IGL_INLINE void Renderer::draw( GLFWwindow* window)
     int indx = 0;
     for (auto& info : drawInfos)
     {
-        if (!(info->flags & (inAction | inAction2)) || ((info->flags & inAction2) && !(info->flags & stencilTest) && isPressed && !isPicked) || ((info->flags & inAction2) && (info->flags & stencilTest)  && isPicked ))
+        // Added: changed multipicking to work when inAction2 && !stencilTest && isSelecting and single picking to work when inAction && stencilTest && isPicked
+        if (!(info->flags & (inAction | inAction2)) || ((info->flags & inAction2) && !(info->flags & stencilTest) && isSelecting) || ((info->flags & inAction) && (info->flags & stencilTest)  && isPicked ))
             draw_by_info(indx);
         indx++;
     }
@@ -182,22 +185,6 @@ void Renderer::UpdatePosition(double xpos, double ypos)
 	xold = xpos;
 	yold = ypos;
 }
-
-
-void Renderer::TranslateCamera(Eigen::Vector3f amt)
-{
-	cameras[0]->MyTranslate(amt.cast<double>(), true);
-}
-
-//void Renderer::RotateCamera(float amtX, float amtY)
-//{
-//	core().camera_eye = core().camera_eye + Eigen::Vector3f(0,amtY,0);
-//	Eigen::Matrix3f Mat;
-//		Mat << cos(amtY),0,sin(amtY),  0, 1, 0 ,  -sin(amtY), 0, cos(amtY) ;
-//	core().camera_eye = Mat* core().camera_eye;
-//
-//}
-
 
 float Renderer::UpdatePosition(float xpos, float ypos)
 {
@@ -230,7 +217,6 @@ void Renderer::AddViewport(int left, int bottom, int width, int height)
 {
     viewports.emplace_back(Eigen::Vector4i(left, bottom, width, height));
     glViewport(left, bottom, width, height);
-
 }
 
 void Renderer::AddDraw(int viewportIndx, int cameraIndx, int shaderIndx, int buffIndx, unsigned int flags)
@@ -278,43 +264,70 @@ Renderer::~Renderer()
 }
 
 
-bool Renderer::Picking(int x, int y)
+bool Renderer::Picking(int x, int y, int cameraIndex)
 {
-
-    Eigen::Vector4d pos;
-
-    unsigned char data[4];
-    //glGetIntegerv(GL_VIEWPORT, viewport); //reading viewport parameters
-    int i = 0;
-    isPicked =  scn->Picking(data,i);
-    return isPicked;
-
+    // Added: call picking of the scene
+    // TODO use the section stencil viewport
+    UnPick(2);
+    igl::opengl::Camera* currentCamera = cameras[cameraIndex];
+    Eigen::Matrix4d Proj = currentCamera->GetViewProjection().cast<double>();
+    Eigen::Matrix4d View = currentCamera->MakeTransScaled().inverse();
+    // TODO use the section stencil viewport
+    // TODO currentViewport to currentSection
+    // TODO depth global?
+    depth = GetScene()->Picking(Proj*View, viewports[currentViewport], currentViewport, 2, x, y);
+    if (depth != -1)
+    {
+        depth = (depth * 2.0f - currentCamera->GetFar()) / (currentCamera->GetNear() - currentCamera->GetFar());
+        isMany = false;
+        isPicked = true;
+        return true;
+    }
+    else {
+        depth = 0;
+        return false;
+    }
 }
+
+bool Renderer::TrySinglePicking(int x, int y, int cameraIndex)
+{
+    // Added: try to single picking when in many selected mode if the click is singular
+    double dist = sqrt(pow(xWhenPress - x, 2) + pow(yWhenPress - y, 2));
+    if (IsMany() && dist <= 3) {
+        return Picking(x, y, cameraIndex);
+    }
+    return false;
+}
+
 
 void Renderer::OutLine()
 {
     ActionDraw(0);
 }
 
-void Renderer::PickMany(int viewportIndx)
+void Renderer::PickMany(int x, int y, int cameraIndex)
 {
-    if (!isPicked)
+    // Changed: pick allways
+    // TODO hardcoded cameras and viewport
+    int viewportCurrIndx = currentViewport;
+    int xMin = std::min(xWhenPress, xold);
+    int yMin = std::min(viewports[viewportCurrIndx].w() - yWhenPress, viewports[viewportCurrIndx].w() - yold);
+    int xMax = std::max(xWhenPress, xold);
+    int yMax = std::max(viewports[viewportCurrIndx].w() - yWhenPress, viewports[viewportCurrIndx].w() - yold);
+    // TODO hardcoded viewport
+    UnPick(2);
+    igl::opengl::Camera* currentCamera = cameras[cameraIndex];
+    // TODO stencil viewport
+    // TODO global depth
+	depth = scn->AddPickedShapes(currentCamera->GetViewProjection().cast<double>() * (currentCamera->MakeTransd()).inverse(), viewports[viewportCurrIndx], viewportCurrIndx, xMin, xMax, yMin, yMax,2);
+    if (depth != -1)
     {
-        int viewportCurrIndx = 0;
-        int xMin = std::min(xWhenPress, xold);
-        int yMin = std::min(viewports[viewportCurrIndx].w() - yWhenPress, viewports[viewportCurrIndx].w() - yold);
-        int xMax = std::max(xWhenPress, xold);
-        int yMax = std::max(viewports[viewportCurrIndx].w() - yWhenPress, viewports[viewportCurrIndx].w() - yold);
-		depth = scn->AddPickedShapes(cameras[0]->GetViewProjection().cast<double>() * (cameras[0]->MakeTransd()).inverse(), viewports[viewportCurrIndx], viewportCurrIndx, xMin, xMax, yMin, yMax,viewportIndx);
-        if (depth != -1)
-        {
-            depth = (depth*2.0f - cameras[0]->GetFar()) / (cameras[0]->GetNear() - cameras[0]->GetFar());
-            isMany = true;
-            isPicked = true;
-        }
-        else
-            depth = 0;
-
+        depth = (depth*2.0f - currentCamera->GetFar()) / (currentCamera->GetNear() - currentCamera->GetFar());
+        isMany = true;
+        isPicked = true;
+    }
+    else {
+        depth = 0;
     }
 }
 
@@ -405,6 +418,7 @@ bool Renderer::CheckViewport(int x, int y, int viewportIndx)
     return (viewports[viewportIndx].x() < x && viewports[viewportIndx].y() < y && viewports[viewportIndx].z() + viewports[viewportIndx].x() > x && viewports[viewportIndx].w() + viewports[viewportIndx].y() > y);
 }
 
+// TODO update section
 bool Renderer::UpdateViewport(int viewport)
 {
     if (viewport != currentViewport)
@@ -418,17 +432,14 @@ bool Renderer::UpdateViewport(int viewport)
     return true;
 }
 
-void Renderer::MouseProccessing(int button, int mode, int viewportIndx)
+void Renderer::MouseProccessing(int button, int cameraIndex)
 {
-    if (isPicked || button == 0)
-    {
-
-		if(button == 2)
-			scn->MouseProccessing(button, zrel, zrel, CalcMoveCoeff(mode & 7, viewports[viewportIndx].w()), cameras[0]->MakeTransd(), viewportIndx);
-		else
-			scn->MouseProccessing(button, xrel, yrel, CalcMoveCoeff(mode & 7, viewports[viewportIndx].w()), cameras[0]->MakeTransd(), viewportIndx);
-    }
-
+    // Changed: allways process mouse input
+    // TODO change to sections
+    if(button == GLFW_MOUSE_BUTTON_MIDDLE)
+	    scn->MouseProccessing(button, zrel, zrel, CalcMoveCoeff(cameraIndex, viewports[currentViewport].w()), cameras[cameraIndex]->MakeTransd(), currentViewport);
+    else
+	    scn->MouseProccessing(button, xrel, yrel, CalcMoveCoeff(cameraIndex, viewports[currentViewport].w()), cameras[cameraIndex]->MakeTransd(), currentViewport);
 }
 
 float Renderer::CalcMoveCoeff(int cameraIndx, int width)
@@ -513,7 +524,7 @@ IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, std::list<int>x
                 //}
                 drawInfos.emplace_back(new_draw_info);
             }
-            DrawInfo* temp = new DrawInfo(indx, 0, 1, 0, (int)(indx < 1) | depthTest | clearDepth ,next_property_id);
+            DrawInfo* temp = new DrawInfo(indx, 0, 3, 0, (int)(indx < 1) | depthTest | clearDepth ,next_property_id);
             next_property_id <<= 1;
             drawInfos.emplace_back(temp);
             indx++;
