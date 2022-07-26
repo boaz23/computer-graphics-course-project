@@ -16,6 +16,7 @@ public:
 	 unsigned int GetSlot(unsigned int indx);
 	 inline unsigned int GetNumOfTexs() { return numOfTexs; }
 	 void Bind(const std::vector<Texture*> textures, int indx);
+	 void ChangeTexture(int slot, int textureRendererIndex) { texIDs[slot] = textureRendererIndex; }
 	 void rotateTexs();
 
 

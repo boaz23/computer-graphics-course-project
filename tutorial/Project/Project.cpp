@@ -42,7 +42,7 @@ void Project::Init()
 	unsigned int slots[3] = { 0 , 1, 2 };
 
 	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
-	int materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
+	materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
 	int materialIndex_grass = AddMaterial(texIDs + 2, slots + 2, 1);
 
 	int sceneCube = AddShape(Cube, -2, TRIANGLES);

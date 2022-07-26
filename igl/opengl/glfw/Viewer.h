@@ -24,6 +24,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include <array>
 #include <vector>
 #include <list>
 #include <string>
@@ -78,6 +79,8 @@ namespace glfw
       IGL_INLINE size_t LayersCount() const { return layers.size(); }
       void ToggleLayerVisibility(int layer);
       int AddLayer();
+
+      void ChangeCubemapImage(std::string filePath);
 
       virtual int AddShape(int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
       IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int viewport = 0)
@@ -199,6 +202,10 @@ public:
     // Keep track of the global position of the scrollwheel
     float scroll_position;
 
+  protected:
+      int materialIndex_cube;
+      std::unordered_map<std::string, std::array<int, 3>> textureCache;
+
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -261,6 +268,7 @@ public:
 
   protected:
       virtual bool ShouldRenderViewerData(const ViewerData& data, const int viewportIndx) const;
+      Texture* Viewer::AddTexture_Core(const std::string& textureFileName, int dim);
   };
 
 } // end namespace

@@ -2,6 +2,7 @@
 #ifndef ENIGEREWORK_IGL_OPENGL_UTIL_H
 #define ENIGEREWORK_IGL_OPENGL_UTIL_H
 
+#include <string>
 #include <type_traits>
 
 using signed_size_t = std::make_signed_t<std::size_t>;
@@ -15,5 +16,7 @@ template<typename T> size_t addCyclic(T index, T delta, size_t max)
 {
 	return mathModulo<T>(index + delta, max);
 }
+
+std::string CanonicalizePath(const std::string& path, bool *success);
 
 #endif

@@ -13,7 +13,7 @@
 
 #include <Eigen/LU>
 
-
+#include <utility>
 #include <cmath>
 #include <cstdio>
 #include <sstream>
@@ -41,8 +41,8 @@
 #include <igl/snap_to_canonical_view_quat.h>
 #include <igl/unproject.h>
 #include <igl/serialize.h>
+#include <igl/opengl/util.h>
 #include "../gl.h"
-
 
 // Internal global variables used for glfw event handling
 //static igl::opengl::glfw::Viewer * __viewer;
@@ -122,6 +122,13 @@ namespace glfw
       int newLayer = layers.size();
       layers.push_back(false);
       return newLayer;
+  }
+
+  void Viewer::ChangeCubemapImage(std::string filePath)
+  {
+      Material* cubemapMaterial = materials[materialIndex_cube];
+      int textureIndex = AddTexture(filePath, 3);
+      cubemapMaterial->ChangeTexture(0, textureIndex);
   }
 
 IGL_INLINE bool
@@ -330,7 +337,7 @@ IGL_INLINE bool
     if (fname.length() == 0)
       return;
     
-    this->load_mesh_from_file(fname.c_str());
+    this->load_mesh_from_file(fname);
   }
 
   IGL_INLINE void Viewer::open_dialog_save_mesh()
@@ -828,10 +835,44 @@ IGL_INLINE bool
         return !IsLayerHidden(data.layer) && data.Is2Render(viewportIndx);
     }
 
+    Texture* Viewer::AddTexture_Core(const std::string& textureFileName, int dim)
+    {
+        Texture* texture = new Texture(textureFileName, dim);
+        textures.push_back(texture);
+        return texture;
+    }
+
     int Viewer::AddTexture(const std::string& textureFileName, int dim)
     {
-        textures.push_back(new Texture(textureFileName, dim));
-        return(textures.size() - 1);
+        //std::string canonicalPath = textureFileName;
+        bool c;
+        std::string canonicalPath = CanonicalizePath(textureFileName, &c);
+        auto fileTextures = textureCache.find(canonicalPath);
+        if (fileTextures == textureCache.end())
+        {
+            textureCache.insert
+            (
+                std::pair<std::string, std::array<int, 3>>
+                { canonicalPath, { -1, -1, -1 } }
+            );
+            fileTextures = textureCache.find(canonicalPath);
+        }
+
+        int textureIndex{ -1 };
+        std::array<int, 3> &texturesArr = fileTextures->second;
+        size_t dimIndex = static_cast<size_t>(dim) - 1;
+        if (texturesArr[dimIndex] < 0)
+        {
+            textureIndex = textures.size();
+            Texture* texture = AddTexture_Core(canonicalPath, dim);
+            texturesArr[dimIndex] = textureIndex;
+        }
+        else
+        {
+            textureIndex = texturesArr[dimIndex];
+        }
+
+        return textureIndex;
     }
 
     void Viewer::BindMaterial(Shader* s, unsigned int materialIndx)

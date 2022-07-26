@@ -54,18 +54,13 @@
 	{
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
-		
 		if (rndr->IsPicked())
 		{
 			rndr->UpdateZpos((int)yoffset);
 			//  TODO section
+			// TODO zoom on object 
 			rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE, scn->selectedCameraIndex);
 		}
-		else
-		{
-			rndr->MoveCamera(scn->selectedCameraIndex, rndr->zTranslate, (float)yoffset);
-		}
-		
 	}
 	
 	void glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos)

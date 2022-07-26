@@ -11,7 +11,7 @@ public:
 	Texture(int width, int height);
 	void Bind(int slot);
 
-	inline int GetSlot(){return m_texture;}
+	inline int GetId() { return m_texture; }
 	 ~Texture();
 protected:
 private:
