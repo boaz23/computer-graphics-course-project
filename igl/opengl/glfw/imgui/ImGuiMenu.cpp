@@ -218,69 +218,183 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
   }
 
   // Mesh
-  if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
+  if (project && ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
   {
-    if (ImGui::Button("Load##Mesh", halfWidthVec2))
+    if (project && ImGui::Button("Load##Mesh", fullWidthVec2))
     {
-        int savedIndx = viewer.selected_data_index;
-       // viewer.selected_data_index = viewer.parents.size();
-       // viewer.AddShape(viewer.xCylinder,-1,viewer.TRIANGLES);
-        viewer.open_dialog_load_mesh();
-      if (viewer.data_list.size() > viewer.parents.size())
-      {
-          
-          viewer.parents.push_back(-1);
-          viewer.SetShapeViewport(viewer.selected_data_index, 0);
-          viewer.SetShapeShader(viewer.selected_data_index, 2);
-          viewer.SetShapeMaterial(viewer.selected_data_index,0);
-          //viewer.data_list.back()->set_visible(false, 1);
-          //viewer.data_list.back()->set_visible(true, 2);
-          viewer.data_list.back()->UnHide();
-          viewer.data_list.back()->show_faces = 3;
-          viewer.data()->mode = viewer.TRIANGLES;
-          viewer.selected_data_index = savedIndx;
-      }
+      std::string filePath = igl::file_dialog_open();
+      project->AddShapeFromMenu(filePath);
     }
-    ImGui::SameLine(0, p);
-    if (ImGui::Button("Save##Mesh", halfWidthVec2))
+    //ImGui::SameLine(0, p);
+    //if (ImGui::Button("Save##Mesh", halfWidthVec2))
+    //{
+    //  viewer.open_dialog_save_mesh();
+    //}
+
+    if (project)
     {
-      viewer.open_dialog_save_mesh();
+        ImGui::PushItemWidth(100 * menu_scaling());
+
+        ImGui::Text("Material:");
+        ImGui::SameLine(0, p);
+
+        static int selectedMaterialComboIndex = 0;
+        auto& availableMaterials = project->availableMaterials;
+
+        bool allSameLayer = viewer.pShapes.size() == 0 ? false :
+            viewer.AllPickedShapesSameValue<unsigned int>([](const igl::opengl::ViewerData& shape)
+            {
+                return shape.GetMaterial();
+            });
+        bool fieldChanged{ false };
+        int materialComboIndex{ -1 };
+        if (allSameLayer)
+        {
+            unsigned int commonMaterialIndex = viewer.GetViewerDataAt(viewer.pShapes[0]).GetMaterial();
+            for (size_t i = 0; i < availableMaterials.size(); ++i)
+            {
+                const auto& materialPair = availableMaterials[i];
+                if (materialPair.first == commonMaterialIndex)
+                {
+                    materialComboIndex = i;
+                    break;
+                }
+            }
+
+            if (selectedMaterialComboIndex != materialComboIndex)
+            {
+                selectedMaterialComboIndex = materialComboIndex;
+                fieldChanged = true;
+            }
+        }
+
+        const std::string& materialComboPreview = allSameLayer ? availableMaterials[materialComboIndex].second : "";
+        if (ImGui::BeginCombo("##material", materialComboPreview.c_str()))
+        {
+            bool valueChanged{ false };
+            for (size_t i = 0; i < availableMaterials.size(); ++i)
+            {
+                const bool item_selected = i == selectedMaterialComboIndex && allSameLayer;
+                const char* item_text = availableMaterials[i].second.c_str();
+                if (ImGui::Selectable(item_text, item_selected))
+                {
+                    valueChanged = true;
+                    selectedMaterialComboIndex = i;
+                }
+                if (item_selected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+
+            if (valueChanged && !fieldChanged)
+            {
+                int materialIndex = availableMaterials[selectedMaterialComboIndex].first;
+                for (int shapeIndex : viewer.pShapes)
+                {
+                    viewer.SetShapeMaterial(shapeIndex, materialIndex);
+                }
+            }
+        }
+
+        ImGui::PopItemWidth();
     }
   }
 
   if (ImGui::CollapsingHeader("Layers", ImGuiTreeNodeFlags_DefaultOpen))
   {
+      ImGui::PushItemWidth(80 * menu_scaling());
+
       if (ImGui::Button("Add layer", fullWidthVec2))
       {
           viewer.AddLayer();
       }
 
-      ImGui::Text("Layer:");
-      ImGui::SameLine(0, p);
-      ImGui::PushItemWidth(80 * menu_scaling());
-      int prevEditingLayer = viewer.currentEditingLayer;
       int maxLayer = viewer.LayersCount() - 1;
-      if (ImGui::InputInt("", &viewer.currentEditingLayer))
+      const int step = 1, step_fast = 5;
+
       {
-          if (viewer.currentEditingLayer < 1 || viewer.currentEditingLayer > maxLayer)
+          ImGui::Text("Editing layer:");
+          ImGui::SameLine(0, p);
+          int& layerField = viewer.currentEditingLayer;
+          int prevEditingLayer = layerField;
+          if (ImGui::InputInt("##editingLayer", &layerField, step, step_fast))
           {
-              viewer.currentEditingLayer = prevEditingLayer;
+              if (layerField < 1 || layerField > maxLayer)
+              {
+                  layerField = prevEditingLayer;
+              }
+          }
+          ImGui::SameLine(0, 0);
+          ImGui::Text(" / %d", maxLayer);
+
+          bool isCurrentLayerHidden = viewer.IsLayerHidden(layerField);
+
+          ImGui::Text("State:");
+          ImGui::SameLine(0, p);
+          ImGui::Text(isCurrentLayerHidden ? "Hidden" : "Shown");
+
+          if (ImGui::Button(isCurrentLayerHidden ? "Show layer" : "Hide layer", fullWidthVec2))
+          {
+              viewer.ToggleLayerVisibility(layerField);
           }
       }
-      ImGui::SameLine(0, 0);
-      ImGui::Text(" / %d", maxLayer);
-      ImGui::PopItemWidth();
 
-      bool isCurrentLayerHidden = viewer.IsLayerHidden(viewer.currentEditingLayer);
-
-      ImGui::Text("State:");
-      ImGui::SameLine(0, p);
-      ImGui::Text(isCurrentLayerHidden ? "Hidden" : "Shown");
-
-      if (ImGui::Button(isCurrentLayerHidden ? "Show layer" : "Hide layer", fullWidthVec2))
       {
-          viewer.ToggleLayerVisibility(viewer.currentEditingLayer);
+          ImGui::Text("Object%s layer:", viewer.pShapes.size() <= 1 ? "" : "s");
+          ImGui::SameLine(0, p);
+          int& layerField = viewer.currentObjectLayer;
+          bool allSameLayer = viewer.pShapes.size() == 0 ? false :
+              viewer.AllPickedShapesSameValue<int>([](const igl::opengl::ViewerData& shape)
+              {
+                  return shape.layer;
+              });
+          bool fieldChanged{ false };
+          if (allSameLayer)
+          {
+              int commonLayer = viewer.GetViewerDataAt(viewer.pShapes[0]).layer;
+              if (layerField != commonLayer)
+              {
+                  layerField = commonLayer;
+                  fieldChanged = true;
+              }
+          }
+          int prevObjectLayer = layerField;
+          ImGuiInputTextCallback callback = [](ImGuiInputTextCallbackData* data)
+          {
+              auto viewer = static_cast<igl::opengl::glfw::Viewer*>(data->UserData);
+              viewer->isEditingObjectLayer = true;
+              return 0;
+          };
+          if
+          (
+              ImGui::InputScalar
+              (
+                "##objectLayer", ImGuiDataType_S32, (void*)&layerField,
+                (void*)&step, (void*)&step_fast,
+                (allSameLayer || viewer.isEditingObjectLayer) ? "%d" : "",
+                ImGuiInputTextFlags_CallbackEdit,
+                callback, &viewer
+              ) && !fieldChanged
+          )
+          {
+              viewer.isEditingObjectLayer = false;
+               if (layerField < 1 || layerField > maxLayer)
+               {
+                   layerField = prevObjectLayer;
+               }
+               for (int shapeIndex : viewer.pShapes)
+               {
+                   igl::opengl::ViewerData& shape = viewer.GetViewerDataAt(shapeIndex);
+                   shape.layer = layerField;
+               }
+          }
+          ImGui::SameLine(0, 0);
+          ImGui::Text(" / %d", maxLayer);
       }
+
+      ImGui::PopItemWidth();
   }
 
   // Viewing options
@@ -319,12 +433,15 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
 //      ImGui::PopItemWidth();
 //  }
 
-  if (ImGui::Button("Change cubemap image", fullWidthVec2))
+  if (ImGui::CollapsingHeader("Cubemap", ImGuiTreeNodeFlags_DefaultOpen))
   {
-      std::string filePath = igl::file_dialog_open();
-      if (filePath.length() > 0)
+      if (ImGui::Button("Change image", fullWidthVec2))
       {
-          viewer.ChangeCubemapImage(filePath);
+          std::string filePath = igl::file_dialog_open();
+          if (filePath.length() > 0)
+          {
+              viewer.ChangeCubemapImage(filePath);
+          }
       }
   }
 

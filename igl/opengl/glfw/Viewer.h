@@ -53,11 +53,13 @@ namespace glfw
       Renderer* renderer;
       std::vector<bool> layers;
       int currentEditingLayer;
+      int currentObjectLayer;
+      bool isEditingObjectLayer;
 
       enum axis { xAxis, yAxis, zAxis };
       enum transformations { xTranslate, yTranslate, zTranslate, xRotate, yRotate, zRotate, xScale, yScale, zScale,scaleAll,reset };
       enum modes { POINTS, LINES, LINE_LOOP, LINE_STRIP, TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN, QUADS };
-      enum shapes {Axis, xCylinder,yCylinder,zCylinder, Plane, Cube, Octahedron, Tethrahedron, LineCopy, MeshCopy, Sphere };
+      enum shapes {Axis, xCylinder,yCylinder,zCylinder, Plane, Cube, Octahedron, Tethrahedron, LineCopy, MeshCopy, Sphere, OtherShape };
       enum buffers { COLOR, DEPTH, STENCIL, BACK, FRONT, NONE };
     // UI Enumerations
    // enum class MouseButton {Left, Middle, Right};
@@ -82,15 +84,20 @@ namespace glfw
 
       void ChangeCubemapImage(std::string filePath);
 
-      virtual int AddShape(int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
-      IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int viewport = 0)
+  protected:
+      virtual int Viewer::InitSelectedShape(int type, int parent, unsigned int mode, int viewport, int shaderIndex);
+
+  public:
+      // TODO: Remove the viewport argument (add it manually in project)
+      int AddShape(int type, int parent, unsigned int mode, int shaderIndex, int viewport, const ViewerDataCreateFunc dataCreator);
+      IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int shaderIndex, int viewport)
       {
-          return AddShape(type, parent, mode, std::bind(&Viewer::DefualtViewerDataCreator, this), viewport);
+          return AddShape(type, parent, mode, viewport, shaderIndex, std::bind(&Viewer::DefualtViewerDataCreator, this));
       }
-      virtual int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
-      IGL_INLINE int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int viewport = 0)
+      int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, int viewport, const ViewerDataCreateFunc dataCreator);
+      IGL_INLINE int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, int viewport)
       {
-          return AddShapeFromFile(fileName, parent, mode, std::bind(&Viewer::DefualtViewerDataCreator, this), viewport);
+          return AddShapeFromFile(fileName, parent, mode, shaderIndex, viewport, std::bind(&Viewer::DefualtViewerDataCreator, this));
       }
       virtual void WhenTranslate(float dx, float dy) {}
       virtual void WhenRotate(float dx, float dy) {}
@@ -128,6 +135,8 @@ namespace glfw
     //   mesh_id  unique identifier associated to the desired mesh (current mesh if -1)
     IGL_INLINE ViewerData* data(int mesh_id = -1);
     IGL_INLINE const ViewerData* data(int mesh_id = -1) const;
+    IGL_INLINE ViewerData& GetViewerDataAt(int index) { return *data_list[index]; }
+    IGL_INLINE const ViewerData& GetViewerDataAt(int index) const { return *data_list[index]; }
 
     // Append a new "slot" for a mesh (i.e., create empty entries at the end of
     // the data_list and opengl_state_list.
@@ -182,7 +191,6 @@ public:
 	std::vector<int> parents;
     std::vector<Texture*> textures;
     std::vector<Material*> materials;
-    std::list<int> pickedShapes;
     Eigen::Vector3d pickedNormal;
     int selected_data_index;
     int next_data_id;
@@ -225,6 +233,27 @@ public:
       AddPickedShapes(const Eigen::Matrix4d &PV, const Eigen::Vector4i &viewport, int viewportIndx, int left, int right,
                       int up, int bottom, int newViewportIndx);
 
+      template<typename T> bool AllPickedShapesSameValue(std::function<T(const ViewerData&)> valueFunc) const
+      {
+          if (pShapes.size() <= 1)
+          {
+              return true;
+          }
+
+          T prevValue = valueFunc(GetViewerDataAt(pShapes[0]));
+          for (auto &it = pShapes.begin() + 1; it < pShapes.end(); ++it)
+          {
+              T value = valueFunc(GetViewerDataAt(*it));
+              if (prevValue != value)
+              {
+                  return false;
+              }
+              prevValue = value;
+          }
+
+          return true;
+      }
+
       void
       MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat, int viewportIndx);
 
@@ -254,7 +283,7 @@ public:
 
       virtual float
           Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y);
-      inline void UnPick() { selected_data_index = -1; pickedShapes.clear(); }
+      inline void UnPick() { selected_data_index = -1; pShapes.clear(); }
 
       bool load_mesh_from_data(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const Eigen::MatrixXd &UV_V,
                                const Eigen::MatrixXi &UV_F, const ViewerDataCreateFunc dataCreator);

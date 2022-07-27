@@ -212,7 +212,7 @@ public:
   // Copy visualization options from one viewport to another
   IGL_INLINE void copy_options(const ViewerCore &from, const ViewerCore &to);
   IGL_INLINE void SetMaterial(const unsigned int id) { materialID = id; }
-  IGL_INLINE unsigned int GetMaterial() { return materialID; }
+  IGL_INLINE unsigned int GetMaterial() const { return materialID; }
   Eigen::MatrixXd V; // Vertices of the current mesh (#V x 3)
   Eigen::MatrixXi F; // Faces of the mesh (#F x 3)
 

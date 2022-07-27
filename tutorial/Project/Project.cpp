@@ -24,6 +24,7 @@ void Project::Init()
 {		
 	Viewer::AddLayer();
 	Viewer::AddLayer();
+
 	int shaderIndex_picking = AddShader("shaders/pickingShader");
 	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
 	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
@@ -33,30 +34,41 @@ void Project::Init()
 	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box UV.png", 3);
 	int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
 	int textureIndex_box0 = AddTexture("textures/box0.bmp", 2);
-	unsigned int texIDs[3] =
+	int textureIndex_bricks = AddTexture("textures/bricks.jpg", 2);
+
+	unsigned int texIDs[] =
 	{
 		textureIndex_box0,
 		textureIndex_cubeMap_daylightBox,
-		textureIndex_grass
+		textureIndex_grass,
+		textureIndex_plane,
+		textureIndex_bricks,
 	};
-	unsigned int slots[3] = { 0 , 1, 2 };
+	unsigned int slots[] = { 0, 1, 2, 3, 4 };
 
-	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
+	int materialIndex_box0 = AddMaterial(texIDs + 0, slots + 0, 1);
 	materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
 	int materialIndex_grass = AddMaterial(texIDs + 2, slots + 2, 1);
+	int materialIndex_plane = AddMaterial(texIDs + 3, slots + 3, 1);
+	int materialIndex_bricks = AddMaterial(texIDs + 4, slots + 4, 1);
+	availableMaterials =
+	{
+		std::pair<int, std::string>{materialIndex_box0, "Box"},
+		std::pair<int, std::string>{materialIndex_grass, "Grass"},
+		std::pair<int, std::string>{materialIndex_plane, "Plane"},
+		std::pair<int, std::string>{materialIndex_bricks, "Bricks"}
+	};
 
-	int sceneCube = AddShape(Cube, -2, TRIANGLES);
-	int scissorBox = AddShape(Plane, -2, TRIANGLES, 1);
-	int cube1 = AddShape(Cube, -1, TRIANGLES);
-	int cube2 = AddShape(Cube, -1, TRIANGLES);
-	SetShapeShader(sceneCube, shaderIndex_cubemap);
-	SetShapeShader(scissorBox, shaderIndex_picking);
-	SetShapeShader(cube1, shaderIndex_basic);
-	SetShapeShader(cube2, shaderIndex_basic);
+	// TODO: window section (add to all)
+	int sceneCube = AddShape(Cube, -2, TRIANGLES, shaderIndex_cubemap, 0);
+	int scissorBox = AddShape(Plane, -2, TRIANGLES, shaderIndex_picking, 1);
+	data_list[scissorBox]->layer = 0;
+	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, 0);
+	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, 0);
 	SetShapeMaterial(sceneCube, materialIndex_cube);
-	SetShapeMaterial(scissorBox, materialIndex_basic);
+	//SetShapeMaterial(scissorBox, materialIndex_box0);
 	SetShapeMaterial(cube1, materialIndex_grass);
-	SetShapeMaterial(cube2, materialIndex_grass);
+	SetShapeMaterial(cube2, materialIndex_box0);
 
 
 	selected_data_index = sceneCube;
@@ -125,6 +137,17 @@ bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const 
 		Viewer::ShouldRenderViewerData(data, viewportIndx);
 }
 
+int Project::AddShapeFromMenu(const std::string& filePath)
+{
+	if (filePath.length() == 0)
+	{
+		return -1;
+	}
+
+	// TODO: window section (add to all)
+	return AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, 0);
+}
+
 void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
 {
 	int cameraIndex = renderer->AddCamera(position, cameraData);
@@ -134,17 +157,19 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 		throw std::exception("Not implemented");
 		break;
 	case CameraKind::Animation:
+		// TODO: window section (add to all)
 		int shapeIndex = AddShapeFromFile
 		(
-			"./data/arm.obj",
+			"./data/arm.obj", // TODO: find a better mesh
 			-1,
 			TRIANGLES,
+			shaderIndex_basic,
+			0,
 			[this, &cameraIndex]()
 			{
 				return new AnimationCameraData(currentEditingLayer, cameraIndex);
 			}
 		);
-		SetShapeShader(shapeIndex, shaderIndex_basic);
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
 		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
 		break;
