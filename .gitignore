@@ -3,4 +3,6 @@
 /out
 !/build/shaders
 /.vs
-external
+/data
+/shaders
+/textures

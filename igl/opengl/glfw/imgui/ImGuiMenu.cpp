@@ -285,9 +285,6 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       }
   }
 
-  _slidebar_changed = ImGui::SliderFloat("Set Transperancy", &_trans_slidebar_val, 0.0, 1.0, _is_multipicking ? "" : "%.2f");
-
-
   // Viewing options
 //  if (ImGui::CollapsingHeader("Viewing Options"))
 //  {
