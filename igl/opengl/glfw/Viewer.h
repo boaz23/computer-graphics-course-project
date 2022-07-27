@@ -214,10 +214,20 @@ public:
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-      void
-      Draw(int shaderIndx, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View, int sectionIndex, int layerIndex,
-           unsigned int flgs,unsigned int property_id);
-
+      void Draw
+      (
+          int shaderIndx, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View,
+          int sectionIndex, int layerIndex,
+          Eigen::Vector3d cameraPosition,
+          unsigned int flgs,unsigned int property_id
+      );
+      void Viewer::DrawShape
+      (
+          size_t shapeIndex, int shaderIndx,
+          const Eigen::Matrix4f &Normal, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View,
+          int sectionIndex, int layerIndex,
+          unsigned int flgs, unsigned int property_id
+      );
 
 
       void ClearPickedShapes(std::vector<std::pair<int, int>> stencilLayers);

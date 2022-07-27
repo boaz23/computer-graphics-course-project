@@ -131,7 +131,7 @@ IGL_INLINE void Renderer::draw_by_info(int sectionIndex, int layerIndex, int inf
         else
             Clear(info.Clear_RGBA.x(), info.Clear_RGBA.y(), info.Clear_RGBA.z(), info.Clear_RGBA.w(),info.flags);
     }
-    scn->Draw(scn->GetPickingShaderIndex(), Proj, View, sectionIndex, layerIndex, info.flags, info.property_id);
+    scn->Draw(scn->GetPickingShaderIndex(), Proj, View, sectionIndex, layerIndex, camera.GetPosition(), info.flags, info.property_id);
 }
 
 IGL_INLINE void Renderer::draw( GLFWwindow* window)

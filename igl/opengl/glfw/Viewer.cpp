@@ -430,7 +430,13 @@ IGL_INLINE bool
   }
 
 
-    IGL_INLINE void Viewer::Draw(int shaderIndx, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View, int sectionIndex, int layerIndex, unsigned int flgs,unsigned int property_id)
+    IGL_INLINE void Viewer::Draw
+    (
+        int shaderIndx, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View,
+        int sectionIndex, int layerIndex,
+        Eigen::Vector3d cameraPosition,
+        unsigned int flgs, unsigned int property_id
+    )
     {
 
         Eigen::Matrix4f Normal;
@@ -440,67 +446,112 @@ IGL_INLINE bool
         else
             Normal = Eigen::Matrix4f::Identity();
 
-        for (int i = 0; i < data_list.size(); i++)
+        std::vector<size_t> opaqueDataIndices;
+        std::map<double, size_t, std::greater<double>> sortedTransperantDataIndices;
+        for (size_t i = 0; i < data_list.size(); ++i)
         {
-            auto shape = data_list[i];
-            if (ShouldRenderViewerData(*shape, sectionIndex, layerIndex))
+            ViewerData *shape = data_list[i];
+            if (shape->alpha == 1.0f)
+            {
+                opaqueDataIndices.push_back(i);
+            }
+            else
+            {
+                double distanceSq = (cameraPosition - shape->GetPosition()).squaredNorm();
+                sortedTransperantDataIndices[distanceSq] = i;
+            }
+        }
+        for (size_t shapeIndex : opaqueDataIndices)
+        {
+            DrawShape
+            (
+                shapeIndex, shaderIndx,
+                Normal, Proj, View,
+                sectionIndex, layerIndex,
+                flgs, property_id
+            );
+        }
+        for (const auto& shapeIndexKeyPair : sortedTransperantDataIndices)
+        {
+            size_t shapeIndex = shapeIndexKeyPair.second;
+            DrawShape
+            (
+                shapeIndex, shaderIndx,
+                Normal, Proj, View,
+                sectionIndex, layerIndex,
+                flgs, property_id
+            );
+        }
+    }
+
+    void Viewer::DrawShape
+    (
+        size_t shapeIndex, int shaderIndx,
+        const Eigen::Matrix4f &Normal, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View,
+        int sectionIndex, int layerIndex,
+        unsigned int flgs, unsigned int property_id
+    )
+    {
+        ViewerData &shape = *data_list[shapeIndex];
+        if (ShouldRenderViewerData(shape, sectionIndex, layerIndex))
+        {
+            Eigen::Matrix4f Model = shape.MakeTransScale();
+
+            if (!shape.IsStatic())
             {
 
-                Eigen::Matrix4f Model = shape->MakeTransScale();
-
-                if (!shape->IsStatic())
+                Model = Normal * GetPriviousTrans(View.cast<double>(), shapeIndex).cast<float>() * Model;
+            }
+            else if (parents[shapeIndex] == -2)
+            {
+                Model = View.inverse() * Model;
+            }
+            if (!(flgs & 65536))
+            {
+                Update(Proj, View, Model, shape.GetShader(), shapeIndex);
+                // Draw fill
+                if (shape.show_faces & property_id)
+                    shape.Draw(shaders[shape.GetShader()], true);
+                if (shape.show_lines & property_id)
                 {
-
-                    Model = Normal * GetPriviousTrans(View.cast<double>(),i).cast<float>() * Model;
+                    glLineWidth(shape.line_width);
+                    shape.Draw(shaders[shape.GetShader()], false);
                 }
-                else if (parents[i] == -2) {
-                    Model = View.inverse() * Model;
-                }
-                if (!(flgs & 65536))
+                // overlay draws
+                if (shape.show_overlay & property_id)
                 {
-                    Update(Proj, View, Model, shape->GetShader(),i);
-                    // Draw fill
-                    if (shape->show_faces & property_id)
-                        shape->Draw(shaders[shape->GetShader()], true);
-                    if (shape->show_lines & property_id) {
-                        glLineWidth(shape->line_width);
-                        shape->Draw(shaders[shape->GetShader()],false);
+                    if (shape.show_overlay_depth & property_id)
+                        glEnable(GL_DEPTH_TEST);
+                    else
+                        glDisable(GL_DEPTH_TEST);
+                    if (shape.lines.rows() > 0)
+                    {
+                        Update_overlay(Proj, View, Model, shapeIndex, false);
+                        glEnable(GL_LINE_SMOOTH);
+                        shape.Draw_overlay(overlay_shader, false);
                     }
-                    // overlay draws
-                    if(shape->show_overlay & property_id){
-                        if (shape->show_overlay_depth & property_id)
-                            glEnable(GL_DEPTH_TEST);
-                        else
-                            glDisable(GL_DEPTH_TEST);
-                        if (shape->lines.rows() > 0)
-                        {
-                            Update_overlay(Proj, View, Model,i,false);
-                            glEnable(GL_LINE_SMOOTH);
-                            shape->Draw_overlay(overlay_shader,false);
-                        }
-                        if (shape->points.rows() > 0)
-                        {
-                            Update_overlay(Proj, View, Model,i,true);
-                            shape->Draw_overlay_pints(overlay_point_shader,false);
-                        }
+                    if (shape.points.rows() > 0)
+                    {
+                        Update_overlay(Proj, View, Model, shapeIndex, true);
+                        shape.Draw_overlay_pints(overlay_point_shader, false);
+                    }
                     glEnable(GL_DEPTH_TEST);
-                    }
+                }
+            }
+            else
+            { //picking
+                // Changed: replaced hardcoded 0 with the draw shader
+                if (flgs & 16384)
+                {   //stencil
+                    Eigen::Affine3f scale_mat = Eigen::Affine3f::Identity();
+                    scale_mat.scale(Eigen::Vector3f(1.1f, 1.1f, 1.1f));
+                    Update(Proj, View, Model * scale_mat.matrix(), shaderIndx, shapeIndex);
                 }
                 else
-                { //picking
-                    // Changed: replaced hardcoded 0 with the draw shader
-                    if (flgs & 16384)
-                    {   //stencil
-                        Eigen::Affine3f scale_mat = Eigen::Affine3f::Identity();
-                        scale_mat.scale(Eigen::Vector3f(1.1f, 1.1f, 1.1f));
-                        Update(Proj, View , Model * scale_mat.matrix(), shaderIndx,i);
-                    }
-                    else
-                    {
-                        Update(Proj, View ,  Model, shaderIndx,i);
-                    }
-                    shape->Draw(shaders[shaderIndx], true);
+                {
+                    Update(Proj, View, Model, shaderIndx, shapeIndex);
                 }
+                shape.Draw(shaders[shaderIndx], true);
             }
         }
     }
