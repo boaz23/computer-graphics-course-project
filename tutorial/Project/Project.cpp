@@ -16,7 +16,7 @@ static void printMat(const Eigen::Matrix4d& mat)
 	}
 }
 
-Project::Project(float& transperancy_param) : selectedCameraIndex{0}, isInDesignMode{true}, isDesignModeView{true}, shaderIndex_basic{-1}, _transperancy_param(transperancy_param)
+Project::Project() : selectedCameraIndex{ 0 }, isInDesignMode{ true }, isDesignModeView{ true }, shaderIndex_basic{ -1 }
 {
 }
 
@@ -311,8 +311,6 @@ float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewpor
 		pShapes.push_back(selected_data_index);
 		data_list[selected_data_index]->AddViewport(pickingViewport);
 	}
-	if (pShapes.size() > 0)
-		_transperancy_param = data_list[pShapes[pShapes.size() - 1]]->alpha;
-
+	
 	return closestFaceDist;
 }

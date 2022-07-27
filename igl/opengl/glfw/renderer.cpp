@@ -129,16 +129,6 @@ IGL_INLINE void Renderer::draw_by_info(int info_index){
             Clear(info->Clear_RGBA.x(), info->Clear_RGBA.y(), info->Clear_RGBA.z(), info->Clear_RGBA.w(),info->flags);
     }
 
-    bool _hide_slide_val = false;
-
-    if (scn->pShapes.size() > 1) {
-        for (int pshape : scn->pShapes)
-            if (scn->data_list[pshape]->alpha != scn->data_list[scn->pShapes[0]]->alpha)
-                _hide_slide_val = true;
-    }
-
-    menu->_is_multipicking = _hide_slide_val;
-
     scn->Draw(info->shaderIndx, Proj, View, info->viewportIndx, info->flags,info->property_id);
 }
 
@@ -164,11 +154,6 @@ IGL_INLINE void Renderer::draw( GLFWwindow* window)
 	{
 		menu->pre_draw();
 		menu->callback_draw_viewer_menu();
-
-        if(scn->pShapes.size() > 0)
-            if(menu->_slidebar_changed)
-                for (int pshape : scn->pShapes)
-                    scn->data_list[pshape]->alpha = menu->_trans_slidebar_val;
     }
     int indx = 0;
     for (auto& info : drawInfos)

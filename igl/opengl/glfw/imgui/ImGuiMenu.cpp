@@ -57,7 +57,6 @@ IGL_INLINE void ImGuiMenu::init(Display* disp)
     reload_font();
 
     _trans_slidebar_val = 1.0f;
-    _is_multipicking = false;
   }
 }
 
@@ -400,8 +399,22 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       ImGui::PopItemWidth();
   }
 
-  _slidebar_changed = ImGui::SliderFloat("Set Transperancy", &_trans_slidebar_val, 0.0, 1.0, _is_multipicking ? "" : "%.2f");
+  // Objects Transperancy
+  if (project->pShapes.size() > 0)
+      _trans_slidebar_val = project->data_list[project->pShapes[project->pShapes.size() - 1]]->alpha;
 
+  bool _hide_slide_val = false;
+
+  if (project->pShapes.size() > 1) {
+      for (int pshape : project->pShapes)
+          if (project->data_list[pshape]->alpha != project->data_list[project->pShapes[0]]->alpha)
+              _hide_slide_val = true;
+  }
+
+  if(ImGui::SliderFloat("Set Transperancy", &_trans_slidebar_val, 0.0, 1.0, _hide_slide_val ? "" : "%.2f"))
+      if(project->pShapes.size() > 0)
+          for (int pshape : project->pShapes)
+              project->data_list[pshape]->alpha = _trans_slidebar_val;
 
   // Viewing options
 //  if (ImGui::CollapsingHeader("Viewing Options"))
