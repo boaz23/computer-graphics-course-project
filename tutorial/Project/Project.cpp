@@ -37,30 +37,39 @@ void Project::Init()
 	unsigned int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box UV.png", 3);
 	unsigned int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
 	unsigned int textureIndex_box0 = AddTexture("textures/box0.bmp", 2);
-	unsigned int texIDs[3] =
+	unsigned int textureIndex_bricks = AddTexture("textures/bricks.jpg", 2);
+	unsigned int texIDs[] =
 	{
 		textureIndex_box0,
 		textureIndex_cubeMap_daylightBox,
-		textureIndex_grass
+		textureIndex_grass,
+		textureIndex_plane,
+		textureIndex_bricks,
 	};
-	unsigned int slots[3] = { 0 , 1, 2 };
+	unsigned int slots[] = { 0, 1, 2, 3, 4 };
 
-	int materialIndex_basic = AddMaterial(texIDs + 0, slots + 0, 1);
+	int materialIndex_box0 = AddMaterial(texIDs + 0, slots + 0, 1);
 	materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
 	int materialIndex_grass = AddMaterial(texIDs + 2, slots + 2, 1);
+	int materialIndex_plane = AddMaterial(texIDs + 3, slots + 3, 1);
+	int materialIndex_bricks = AddMaterial(texIDs + 4, slots + 4, 1);
+	availableMaterials =
+	{
+		std::pair<int, std::string>{materialIndex_box0, "Box"},
+		std::pair<int, std::string>{materialIndex_grass, "Grass"},
+		std::pair<int, std::string>{materialIndex_plane, "Plane"},
+		std::pair<int, std::string>{materialIndex_bricks, "Bricks"}
+	};
 	std::vector<std::pair<int, int>>& sceneLayers = renderer->GetSceneLayersIndexes();
-	int sceneCube = AddShape(Cube, -2, TRIANGLES, sceneLayers);
-	int scissorBox = AddShape(Plane, -2, TRIANGLES, renderer->GetScissorsTestLayersIndexes());
-	int cube1 = AddShape(Cube, -1, TRIANGLES, sceneLayers);
-	int cube2 = AddShape(Cube, -1, TRIANGLES, sceneLayers);
-	SetShapeShader(sceneCube, shaderIndex_cubemap);
-	SetShapeShader(scissorBox, pickingShaderIndex);
-	SetShapeShader(cube1, shaderIndex_basic);
-	SetShapeShader(cube2, shaderIndex_basic);
+	int sceneCube = AddShape(Cube, -2, TRIANGLES, shaderIndex_cubemap, sceneLayers);
+	int scissorBox = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex, renderer->GetScissorsTestLayersIndexes());
+	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers);
+	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers);
+	data_list[scissorBox]->layer = 0;
 	SetShapeMaterial(sceneCube, materialIndex_cube);
-	SetShapeMaterial(scissorBox, materialIndex_basic);
+	//SetShapeMaterial(scissorBox, materialIndex_box0);
 	SetShapeMaterial(cube1, materialIndex_grass);
-	SetShapeMaterial(cube2, materialIndex_grass);
+	SetShapeMaterial(cube2, materialIndex_box0);
 
 
 	selected_data_index = sceneCube;
@@ -85,12 +94,16 @@ void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, c
 	s->SetUniformMat4f("Proj", Proj);
 	s->SetUniformMat4f("View", View);
 	s->SetUniformMat4f("Model", Model);
+
 	if (data_list[shapeIndx]->GetMaterial() >= 0 && !materials.empty())
 	{
 		BindMaterial(s, data_list[shapeIndx]->GetMaterial());
 	}
 	if (shaderIndx == 0)
 		s->SetUniform4f("lightColor", 0xc6 / 255.0f, 0x1e / 255.0f, 0x24 / 255.0f, 0.5f);
+	if (shaderIndx == shaderIndex_basic) {
+		s->SetUniform1f("Transperancy", data_list[shapeIndx]->alpha);
+	}
 	s->Unbind();
 }
 
@@ -118,6 +131,16 @@ bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const 
 		Viewer::ShouldRenderViewerData(data, sectionIndex, layerIndex);
 }
 
+int Project::AddShapeFromMenu(const std::string& filePath)
+{
+	if (filePath.length() == 0)
+	{
+		return -1;
+	}
+
+	return AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, renderer->GetSceneLayersIndexes());
+}
+
 void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
 {
 	int cameraIndex = renderer->AddCamera(position, cameraData);
@@ -129,16 +152,16 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 	case CameraKind::Animation:
 		int shapeIndex = AddShapeFromFile
 		(
-			"./data/arm.obj",
+			"./data/arm.obj", // TODO: find a better mesh
 			-1,
 			TRIANGLES,
+			shaderIndex_basic,
 			[this, &cameraIndex]()
 			{
 				return new AnimationCameraData(currentEditingLayer, cameraIndex);
 			},
 			renderer->GetSceneLayersIndexes()
 		);
-		SetShapeShader(shapeIndex, shaderIndex_basic);
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
 		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
 		break;

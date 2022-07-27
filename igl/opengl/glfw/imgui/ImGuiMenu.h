@@ -51,6 +51,8 @@ protected:
   ImGuiContext * context_ = nullptr;
 
 public:
+    float _trans_slidebar_val;
+
     IGL_INLINE virtual void init(Display* disp);// override;
 
   IGL_INLINE virtual void reload_font(int font_size = 13);

@@ -70,7 +70,9 @@ namespace glfw
 	isActive(false),
       renderer{nullptr},
       layers{},
-      currentEditingLayer{1}
+      currentEditingLayer{1},
+      currentObjectLayer{1},
+      isEditingObjectLayer{false}
   {
     data_list.front() = new ViewerData();
     data_list.front()->id = 0;
@@ -525,23 +527,27 @@ IGL_INLINE bool
         next_data_id +=1;
     }
 
-    int Viewer::AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
+    int Viewer::InitSelectedShape(int type, int parent, unsigned int mode, int shaderIndex, std::vector<std::pair<int, int>> sectionLayers)
     {
-        this->load_mesh_from_file(fileName, dataCreator);
-        data()->type = MeshCopy;
+        data()->type = type;
         data()->mode = mode;
-        data()->shaderID = 1;
+        data()->SetShader(shaderIndex);
         data()->AddSectionLayers(sectionLayers);
         //data()->viewports = 1 << viewport;
-    /*    data()->is_visible = true;*/
         data()->show_lines = 0;
-        data()->hide = false;
         data()->show_overlay = 0;
+        data()->hide = false;
         this->parents.emplace_back(parent);
         return data_list.size() - 1;
     }
 
-    int Viewer::AddShape(int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
+    int Viewer::AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
+    {
+        this->load_mesh_from_file(fileName, dataCreator);
+        return InitSelectedShape(MeshCopy, parent, mode, shaderIndex, sectionLayers);
+    }
+
+    int Viewer::AddShape(int type, int parent, unsigned int mode, int shaderIndex, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
     {
       switch(type){
 // Axis, Plane, Cube, Octahedron, Tethrahedron, LineCopy, MeshCopy
@@ -572,19 +578,11 @@ IGL_INLINE bool
               break;
           default:
               break;
-
       }
-      data()->type = type;
-      data()->mode = mode;
-      data()->shaderID = 1;
-      data()->AddSectionLayers(sectionLayers);
-      //data()->viewports = 1 << viewport;
-      //data()->is_visible = 0x1;
-      data()->show_lines = 0;
-      data()->show_overlay = 0;
-      data()->hide = false;
-      if(type == Axis){
-         // data()->is_visible = 0;
+
+      int shapeIndex = InitSelectedShape(type, parent, mode, shaderIndex, sectionLayers);
+
+      if(type == Axis) {
           data()->show_faces = 0;
           data()->show_lines = 0;
           data()->show_overlay = 0xFF;
@@ -593,8 +591,7 @@ IGL_INLINE bool
           data()->add_edges((Eigen::RowVector3d::UnitZ()*4),-(Eigen::RowVector3d::UnitZ()*4),Eigen::RowVector3d(0,0,1));
       }
 
-      this->parents.emplace_back(parent);
-      return data_list.size() - 1;
+      return shapeIndex;
     }
 
 

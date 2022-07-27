@@ -34,7 +34,7 @@ public:
         sceneLayerIndex = AddSectionLayer();
         AddDraw(sceneLayerIndex, buffIndex,
             (int)(index < 1) | depthTest | clearDepth | stencilTest |
-            passStencil | clearStencil,
+            passStencil | clearStencil | blend,
             property_id
         );
         scissorsTestLayerIndex = -1;

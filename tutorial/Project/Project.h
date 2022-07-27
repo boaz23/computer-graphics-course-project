@@ -1,4 +1,5 @@
 #pragma once
+#include <utility>
 #include "igl/opengl/glfw/Viewer.h"
 #include "igl/opengl/Camera.h"
 
@@ -30,6 +31,8 @@ public:
 	/// </summary>
 	bool isDesignModeView;
 
+	std::array<std::pair<int, std::string>, 4> availableMaterials;
+
 	Project();
 //	Project(float angle,float relationWH,float zNear, float zFar);
 	void Init();
@@ -41,7 +44,9 @@ public:
 	void CameraMeshHide(int cameraIndex);
 	void CameraMeshUnhide(int cameraIndex, const Movable &transformations);
 
-	inline bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
+	IGL_INLINE bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
+
+	int AddShapeFromMenu(const std::string& filePath);
 	
 	float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, std::vector<std::pair<int, int>> stencilLayers, int x, int y) override;
 	~Project(void);

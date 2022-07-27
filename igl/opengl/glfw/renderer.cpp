@@ -115,7 +115,8 @@ IGL_INLINE void Renderer::draw_by_info(int sectionIndex, int layerIndex, int inf
     if (info.flags & blend)
     {
         glEnable(GL_BLEND);
-        glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+        // TODO changed order?
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
     else
         glDisable(GL_BLEND);
@@ -260,7 +261,7 @@ Renderer::~Renderer()
 }
 
 
-bool Renderer::Picking(int x, int y, int windowHeight)
+bool Renderer::Picking(int x, int y)
 {
     // Added: call picking of the scene
     UnPick();
