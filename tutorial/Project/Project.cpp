@@ -214,15 +214,12 @@ void Project::MoveCamera(std::function<void(Movable &)> transform)
 	WindowSection &section = renderer->GetCurrentSection();
 	int cameraIndex = section.GetCamera();
 	auto meshIt = camerasToMesh.find(cameraIndex);
-	if (meshIt == camerasToMesh.end())
-	{
-		std::cerr << "Invalid camera index " << cameraIndex << std::endl;
-		return;
-	}
-	int mesh = meshIt->second;
-	igl::opengl::ViewerData &shape = *data_list[mesh];
 	igl::opengl::Camera &camera = renderer->GetCamera(cameraIndex);
-	transform(shape);
+	igl::opengl::ViewerData *shape = meshIt == camerasToMesh.end() ? nullptr : data_list[meshIt->second];
+	if (shape != nullptr)
+	{
+		transform(*shape);
+	}
 	transform(camera);
 }
 
