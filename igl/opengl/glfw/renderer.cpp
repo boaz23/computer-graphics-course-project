@@ -65,17 +65,17 @@ void Renderer::Clear(float r, float g, float b, float a,unsigned int flags)
 //    drawInfos[indx2] = info;
 //}
 
-IGL_INLINE void Renderer::draw_by_info(int sectionIndex, int layerIndex, int info_index){
+IGL_INLINE void Renderer::draw_by_info(int sectionIndex, int layerIndex, int info_index, int width, int height){
     WindowSection& section = *windowSections[sectionIndex];
     igl::opengl::Camera& camera = *cameras[section.GetCamera()];
     DrawInfo& info = section.GetDrawInfo(layerIndex, info_index);
     Eigen::Vector4i viewportSize = section.GetViewportSize();
     buffers[info.bufferIndx]->Bind();
-    glViewport(viewportSize.x(), viewportSize.y(), viewportSize.z(), viewportSize.w());
+    glViewport(viewportSize.x(), height - viewportSize.w() - viewportSize.y(), viewportSize.z(), viewportSize.w());
     if (info.flags & scissorTest)
     {
         int x = std::min(xWhenPress, xold);
-        int y = std::min(viewportSize.w() - yWhenPress, viewportSize.w() - yold);
+        int y = height - std::max(yWhenPress, yold);
         glEnable(GL_SCISSOR_TEST);
         glScissor(x, y, std::abs(xWhenPress - xold), std::abs( yWhenPress - yold));
     }
@@ -172,7 +172,7 @@ IGL_INLINE void Renderer::draw( GLFWwindow* window)
                     ((info->flags & inAction2) && !(info->flags & stencilTest) && isSelecting && CheckSection(xWhenPress, yWhenPress, sectionIndex)) || 
                     // stencil test info
                     ((info->flags & inAction) && (info->flags & stencilTest) && isPicked))
-                    draw_by_info(sectionIndex, layerIndex, infoIndex);
+                    draw_by_info(sectionIndex, layerIndex, infoIndex, width, height);
                 infoIndex++;
             }
             layerIndex++;
@@ -260,7 +260,7 @@ Renderer::~Renderer()
 }
 
 
-bool Renderer::Picking(int x, int y)
+bool Renderer::Picking(int x, int y, int windowHeight)
 {
     // Added: call picking of the scene
     UnPick();

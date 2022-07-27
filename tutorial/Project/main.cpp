@@ -7,7 +7,8 @@ int main(int argc,char *argv[])
 	std::list<int> x, y;
 	x.push_back(DISPLAY_WIDTH/2);
 	x.push_back(DISPLAY_WIDTH);
-	//y.push_back(DISPLAY_HEIGHT/2);
+	y.push_back(DISPLAY_HEIGHT / 2);
+	//y.push_back(DISPLAY_HEIGHT*2 / 3);
 	y.push_back(DISPLAY_HEIGHT);
 	Display disp = Display(DISPLAY_WIDTH, DISPLAY_HEIGHT, "OPENGL");
     igl::opengl::glfw::imgui::ImGuiMenu* menu = new igl::opengl::glfw::imgui::ImGuiMenu();

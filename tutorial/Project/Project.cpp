@@ -180,12 +180,12 @@ void ProjectScreenCoordToScene(double x, double y, float m_viewport[], const Eig
 	Eigen::Vector4d sceneCoord, destCoord;
 	sceneCoord <<
 		2 * ((x - m_viewport[0]) / m_viewport[2]) - 1.0,
-		2 * ((y - m_viewport[1]) / m_viewport[3]) - 1.0,
+		2 * ((y + m_viewport[1]) / m_viewport[3]) - 1.0,
 		0, 1
 		;
 	destCoord <<
 		2 * ((x - m_viewport[0]) / m_viewport[2]) - 1.0,
-		2 * ((y - m_viewport[1]) / m_viewport[3]) - 1.0,
+		2 * ((y + m_viewport[1]) / m_viewport[3]) - 1.0,
 		1, 1
 		;
 	sceneCoord = sceneViewInverse * sceneCoord;
@@ -244,7 +244,7 @@ bool GetClosestIntersectingFace(igl::opengl::ViewerData* mesh, const Eigen::Matr
 }
 
 float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, std::vector<std::pair<int, int>> stencilLayers, int x, int y) {
-	y = viewportDims(3) - y;
+	y = viewportDims.w() - y;
 	float viewportf[] = { (float)viewportDims(0), (float)viewportDims(1), (float)viewportDims(2), (float)viewportDims(3) };
 	Eigen::Matrix4d sceneView = PV * MakeTransScaled();
 	int closestShapeIndex = -1;

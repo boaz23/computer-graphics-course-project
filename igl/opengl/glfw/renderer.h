@@ -251,7 +251,7 @@ private:
 	igl::opengl::glfw::imgui::ImGuiMenu* menu;
 	double z;
 
-    void draw_by_info(int sectionIndex, int layerIndex, int info_index);
+    void draw_by_info(int sectionIndex, int layerIndex, int info_index, int width, int height);
 
     //void ActionDraw(int viewportIndx);
 
