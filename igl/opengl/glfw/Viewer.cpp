@@ -595,15 +595,15 @@ IGL_INLINE bool
     (
         const std::string &fileName,
         int parent, unsigned int mode, int shaderIndex,
-        const ViewerDataCreateFunc dataCreator,
-        const std::vector<std::pair<int, int>> &sectionLayers
+        const std::vector<std::pair<int, int>> &sectionLayers,
+        const ViewerDataCreateFunc dataCreator
     )
     {
         this->load_mesh_from_file(fileName, dataCreator);
         return InitSelectedShape(MeshCopy, parent, mode, shaderIndex, sectionLayers);
     }
 
-    int Viewer::AddShape(int type, int parent, unsigned int mode, int shaderIndex, const ViewerDataCreateFunc dataCreator, const std::vector<std::pair<int, int>> &sectionLayers)
+    int Viewer::AddShape(int type, int parent, unsigned int mode, int shaderIndex, const std::vector<std::pair<int, int>> &sectionLayers, const ViewerDataCreateFunc dataCreator)
     {
       switch(type){
 // Axis, Plane, Cube, Octahedron, Tethrahedron, LineCopy, MeshCopy

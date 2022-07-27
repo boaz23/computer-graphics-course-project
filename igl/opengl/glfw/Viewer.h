@@ -89,23 +89,23 @@ namespace glfw
       virtual int AddShape
       (
           int type, int parent, unsigned int mode, int shaderIndex,
-          const ViewerDataCreateFunc dataCreator,
-          const std::vector<std::pair<int, int>> &sectionLayers
+          const std::vector<std::pair<int, int>> &sectionLayers,
+          const ViewerDataCreateFunc dataCreator
       );
       IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int shaderIndex, const std::vector<std::pair<int, int>> &sectionLayers)
       {
-          return AddShape(type, parent, mode, shaderIndex, std::bind(&Viewer::DefualtViewerDataCreator, this), sectionLayers);
+          return AddShape(type, parent, mode, shaderIndex, sectionLayers, std::bind(&Viewer::DefualtViewerDataCreator, this));
       }
       virtual int AddShapeFromFile
       (
           const std::string& fileName,
           int parent, unsigned int mode, int shaderIndex,
-          const ViewerDataCreateFunc dataCreator,
-          const std::vector<std::pair<int, int>> &sectionLayers
+          const std::vector<std::pair<int, int>> &sectionLayers,
+          const ViewerDataCreateFunc dataCreator
       );
       IGL_INLINE int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, const std::vector<std::pair<int, int>> &sectionLayers)
       {
-          return AddShapeFromFile(fileName, parent, mode, shaderIndex, std::bind(&Viewer::DefualtViewerDataCreator, this), sectionLayers);
+          return AddShapeFromFile(fileName, parent, mode, shaderIndex, sectionLayers, std::bind(&Viewer::DefualtViewerDataCreator, this));
       }
 
       int AddShapeFromData(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const Eigen::MatrixXd &UV_V,

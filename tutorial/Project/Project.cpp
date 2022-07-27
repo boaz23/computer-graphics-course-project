@@ -156,11 +156,11 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 			-1,
 			TRIANGLES,
 			shaderIndex_basic,
+			renderer->GetSceneLayersIndexes(),
 			[this, &cameraIndex]()
 			{
 				return new AnimationCameraData(currentEditingLayer, cameraIndex);
-			},
-			renderer->GetSceneLayersIndexes()
+			}
 		);
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
 		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
