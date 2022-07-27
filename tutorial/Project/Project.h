@@ -54,6 +54,7 @@ public:
 
 protected:
 	bool ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex) const override;
+	void Transform(Movable &movable, std::function<void(Movable &)> transform) override;
 
 private:
 	int shaderIndex_basic;

@@ -290,7 +290,7 @@ private:
     }
 
 protected:
-      void Transform(Movable &movable, std::function<void(Movable &)> transform);
+      virtual void Transform(Movable &movable, std::function<void(Movable &)> transform);
 
 public:
       int AddTexture(const std::string& textureFileName, int dim);

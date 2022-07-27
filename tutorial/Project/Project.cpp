@@ -223,6 +223,17 @@ void Project::MoveCamera(std::function<void(Movable &)> transform)
 	transform(camera);
 }
 
+void Project::Transform(Movable &movable, std::function<void(Movable &)> transform)
+{
+	Viewer::Transform(movable, transform);
+	auto *cameraMesh = dynamic_cast<AnimationCameraData *>(&movable);
+	if (cameraMesh != nullptr)
+	{
+		Movable &camera = renderer->GetCamera(cameraMesh->cameraIndex);
+		Viewer::Transform(camera, transform);
+	}
+}
+
 Project::~Project(void)
 {
 }
