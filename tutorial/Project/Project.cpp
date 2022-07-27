@@ -266,7 +266,7 @@ bool GetClosestIntersectingFace(igl::opengl::ViewerData* mesh, const Eigen::Matr
 	return closestShapeFaceIndex != -1;
 }
 
-float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, std::vector<std::pair<int, int>> stencilLayers, int x, int y) {
+float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y) {
 	y = viewportDims.w() - y;
 	float viewportf[] = { (float)viewportDims(0), (float)viewportDims(1), (float)viewportDims(2), (float)viewportDims(3) };
 	Eigen::Matrix4d sceneView = PV * MakeTransScaled();

@@ -578,13 +578,12 @@ IGL_INLINE bool
         next_data_id +=1;
     }
 
-    int Viewer::InitSelectedShape(int type, int parent, unsigned int mode, int shaderIndex, std::vector<std::pair<int, int>> sectionLayers)
+    int Viewer::InitSelectedShape(int type, int parent, unsigned int mode, int shaderIndex, const std::vector<std::pair<int, int>> &sectionLayers)
     {
         data()->type = type;
         data()->mode = mode;
         data()->SetShader(shaderIndex);
         data()->AddSectionLayers(sectionLayers);
-        //data()->viewports = 1 << viewport;
         data()->show_lines = 0;
         data()->show_overlay = 0;
         data()->hide = false;
@@ -592,13 +591,19 @@ IGL_INLINE bool
         return data_list.size() - 1;
     }
 
-    int Viewer::AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
+    int Viewer::AddShapeFromFile
+    (
+        const std::string &fileName,
+        int parent, unsigned int mode, int shaderIndex,
+        const ViewerDataCreateFunc dataCreator,
+        const std::vector<std::pair<int, int>> &sectionLayers
+    )
     {
         this->load_mesh_from_file(fileName, dataCreator);
         return InitSelectedShape(MeshCopy, parent, mode, shaderIndex, sectionLayers);
     }
 
-    int Viewer::AddShape(int type, int parent, unsigned int mode, int shaderIndex, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
+    int Viewer::AddShape(int type, int parent, unsigned int mode, int shaderIndex, const ViewerDataCreateFunc dataCreator, const std::vector<std::pair<int, int>> &sectionLayers)
     {
       switch(type){
 // Axis, Plane, Cube, Octahedron, Tethrahedron, LineCopy, MeshCopy
@@ -647,43 +652,38 @@ IGL_INLINE bool
 
 
 
-    int Viewer::AddShapeCopy(int shpIndx, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
+    int Viewer::AddShapeCopy
+    (
+        int shpIndx,
+        int parent, unsigned int mode,
+        const std::vector<std::pair<int, int>> &sectionLayers,
+        const ViewerDataCreateFunc dataCreator
+    )
     {
-        load_mesh_from_data(data_list[shpIndx]->V, data_list[shpIndx]->F,data_list[shpIndx]->V_uv, data_list[shpIndx]->F_uv, dataCreator);
-        data()->type = data_list[shpIndx]->type;
-        data()->mode = mode;
-        data()->shaderID = data_list[shpIndx]->shaderID;
-        data()->AddSectionLayers(sectionLayers);
-        //data()->viewports = 1 << viewport;
-        //data()->is_visible = true;
-        data()->show_lines = 0;
-        data()->show_overlay = 0;
-        data()->hide = false;
-        this->parents.emplace_back(parent);
-        return data_list.size() - 1;
+        const ViewerData &shape = *data_list[shpIndx];
+        return AddShapeFromData
+        (
+            shape.V, shape.F,
+            shape.V_uv, shape.F_uv,
+            shape.type, parent, mode, shape.GetShader(),
+            sectionLayers, dataCreator
+        );
     }
 
-    int Viewer::AddShapeFromData(const Eigen::MatrixXd &V,
-                                 const Eigen::MatrixXi &F,
-                                 const Eigen::MatrixXd &UV_V,
-                                 const Eigen::MatrixXi &UV_F
-                                 ,int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
+    int Viewer::AddShapeFromData
+    (
+        const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,
+        const Eigen::MatrixXd &UV_V, const Eigen::MatrixXi &UV_F,
+        int type, int parent, unsigned int mode, int shaderIndex,
+        const std::vector<std::pair<int, int>> &sectionLayers,
+        const ViewerDataCreateFunc dataCreator
+    )
     {
         load_mesh_from_data(V, F, UV_V, UV_F, dataCreator);
-        data()->type = type;
-        data()->mode = mode;
-        data()->shaderID = 1;
-        data()->AddSectionLayers(sectionLayers);
-        //data()->viewports = 1 << viewport;
-       // data()->is_visible = true;
-        data()->show_lines = 0;
-        data()->show_overlay = 0;
-        data()->hide = false;
-        this->parents.emplace_back(parent);
-        return data_list.size() - 1;
+        return InitSelectedShape(type, parent, mode, shaderIndex, sectionLayers);
     }
 
-    void Viewer::ClearPickedShapes(std::vector<std::pair<int, int>> stencilLayers)
+    void Viewer::ClearPickedShapes(const std::vector<std::pair<int, int>> &stencilLayers)
     {
         for (int pShape : pShapes)
         {
@@ -793,7 +793,7 @@ IGL_INLINE bool
 
     }
 
-    float Viewer::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, std::vector<std::pair<int, int>> stencilLayers, int x, int y)
+    float Viewer::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y)
     {
         // Changed: default picking
         return -1.0;
@@ -850,7 +850,7 @@ IGL_INLINE bool
             return Model;
     }
 
-    float Viewer::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right, int up, int bottom, std::vector<std::pair<int, int>> stencilLayers)
+    float Viewer::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right, int up, int bottom, const std::vector<std::pair<int, int>> &stencilLayers)
     {
         //not correct when the shape is scaled
         Eigen::Matrix4d MVP = PV * MakeTransd();

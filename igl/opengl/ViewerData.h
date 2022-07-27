@@ -326,12 +326,12 @@ public:
     const bool invert_normals,
     igl::opengl::MeshGL& meshgl);
 
-    IGL_INLINE void AddSectionLayers(std::vector<std::pair<int, int>> sectionLayersToAdd) { 
+    IGL_INLINE void AddSectionLayers(const std::vector<std::pair<int, int>> &sectionLayersToAdd) {
         sectionLayers.insert(sectionLayersToAdd.cbegin(), sectionLayersToAdd.cend());
     }
 
-    IGL_INLINE void RemoveSectionLayers(std::vector<std::pair<int, int>> sectionLayersToRemove) { 
-        for (auto& layer : sectionLayersToRemove) {
+    IGL_INLINE void RemoveSectionLayers(const std::vector<std::pair<int, int>> &sectionLayersToRemove) {
+        for (const auto& layer : sectionLayersToRemove) {
             sectionLayers.erase(layer);
         }
     }
