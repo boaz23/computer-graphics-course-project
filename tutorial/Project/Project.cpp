@@ -16,7 +16,11 @@ static void printMat(const Eigen::Matrix4d& mat)
 	}
 }
 
-Project::Project() : selectedCameraIndex{ 0 }, isInDesignMode{ true }, isDesignModeView{ true }, shaderIndex_basic{ -1 }
+Project::Project() : 
+	isInDesignMode{true}, 
+	isDesignModeView{true}, 
+	shaderIndex_basic{-1},
+	pickingShaderIndex(-1)
 {
 }
 
@@ -24,18 +28,16 @@ void Project::Init()
 {		
 	Viewer::AddLayer();
 	Viewer::AddLayer();
-
-	int shaderIndex_picking = AddShader("shaders/pickingShader");
+	pickingShaderIndex = AddShader("shaders/pickingShader");
 	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
 	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
 	shaderIndex_basic = AddShader("shaders/basicShader");
 
-	int textureIndex_plane = AddTexture("textures/plane.png", 2);
-	int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box UV.png", 3);
-	int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
-	int textureIndex_box0 = AddTexture("textures/box0.bmp", 2);
-	int textureIndex_bricks = AddTexture("textures/bricks.jpg", 2);
-
+	unsigned int textureIndex_plane = AddTexture("textures/plane.png", 2);
+	unsigned int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box UV.png", 3);
+	unsigned int textureIndex_grass = AddTexture("textures/grass.bmp", 2);
+	unsigned int textureIndex_box0 = AddTexture("textures/box0.bmp", 2);
+	unsigned int textureIndex_bricks = AddTexture("textures/bricks.jpg", 2);
 	unsigned int texIDs[] =
 	{
 		textureIndex_box0,
@@ -58,13 +60,12 @@ void Project::Init()
 		std::pair<int, std::string>{materialIndex_plane, "Plane"},
 		std::pair<int, std::string>{materialIndex_bricks, "Bricks"}
 	};
-
-	// TODO: window section (add to all)
-	int sceneCube = AddShape(Cube, -2, TRIANGLES, shaderIndex_cubemap, 0);
-	int scissorBox = AddShape(Plane, -2, TRIANGLES, shaderIndex_picking, 1);
+	std::vector<std::pair<int, int>>& sceneLayers = renderer->GetSceneLayersIndexes();
+	int sceneCube = AddShape(Cube, -2, TRIANGLES, shaderIndex_cubemap, sceneLayers);
+	int scissorBox = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex, renderer->GetScissorsTestLayersIndexes());
+	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers);
+	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers);
 	data_list[scissorBox]->layer = 0;
-	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, 0);
-	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, 0);
 	SetShapeMaterial(sceneCube, materialIndex_cube);
 	//SetShapeMaterial(scissorBox, materialIndex_box0);
 	SetShapeMaterial(cube1, materialIndex_grass);
@@ -73,13 +74,13 @@ void Project::Init()
 
 	selected_data_index = sceneCube;
 	float s = 60;
-	ShapeTransformation(scaleAll, s,0);
+	ShapeTransformation(scaleAll, s, 0);
 	SetShapeStatic(sceneCube);
 	selected_data_index = scissorBox;
-	ShapeTransformation(zTranslate, -1.1, 1);
+	ShapeTransformation(zTranslate, -1.1f, 1);
 	SetShapeStatic(scissorBox);
 	selected_data_index = cube2;
-	ShapeTransformation(xTranslate, 2, 1);
+	ShapeTransformation(xTranslate, 2.f, 1);
 
 }
 
@@ -123,22 +124,11 @@ void Project::Animate() {
 	}
 }
 
-void Project::ScaleAllShapes(float amt, int viewportIndx)
-{
-	for (int i = 1; i < data_list.size(); i++)
-	{
-		if (data_list[i]->Is2Render(viewportIndx))
-		{
-			data_list[i]->MyScale(Eigen::Vector3d(amt, amt, amt));
-		}
-	}
-}
-
-bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int viewportIndx) const
+bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex) const
 {
 	auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(const_cast<igl::opengl::ViewerData*>(&data));
 	return (pAnimationCameraData == nullptr || EffectiveDesignModeView()) &&
-		Viewer::ShouldRenderViewerData(data, viewportIndx);
+		Viewer::ShouldRenderViewerData(data, sectionIndex, layerIndex);
 }
 
 int Project::AddShapeFromMenu(const std::string& filePath)
@@ -148,8 +138,7 @@ int Project::AddShapeFromMenu(const std::string& filePath)
 		return -1;
 	}
 
-	// TODO: window section (add to all)
-	return AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, 0);
+	return AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, renderer->GetSceneLayersIndexes());
 }
 
 void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
@@ -161,18 +150,17 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 		throw std::exception("Not implemented");
 		break;
 	case CameraKind::Animation:
-		// TODO: window section (add to all)
 		int shapeIndex = AddShapeFromFile
 		(
 			"./data/arm.obj", // TODO: find a better mesh
 			-1,
 			TRIANGLES,
 			shaderIndex_basic,
-			0,
 			[this, &cameraIndex]()
 			{
 				return new AnimationCameraData(currentEditingLayer, cameraIndex);
-			}
+			},
+			renderer->GetSceneLayersIndexes()
 		);
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
 		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
@@ -215,12 +203,12 @@ void ProjectScreenCoordToScene(double x, double y, float m_viewport[], const Eig
 	Eigen::Vector4d sceneCoord, destCoord;
 	sceneCoord <<
 		2 * ((x - m_viewport[0]) / m_viewport[2]) - 1.0,
-		2 * ((y - m_viewport[1]) / m_viewport[3]) - 1.0,
+		2 * ((y + m_viewport[1]) / m_viewport[3]) - 1.0,
 		0, 1
 		;
 	destCoord <<
 		2 * ((x - m_viewport[0]) / m_viewport[2]) - 1.0,
-		2 * ((y - m_viewport[1]) / m_viewport[3]) - 1.0,
+		2 * ((y + m_viewport[1]) / m_viewport[3]) - 1.0,
 		1, 1
 		;
 	sceneCoord = sceneViewInverse * sceneCoord;
@@ -233,7 +221,7 @@ void ProjectScreenCoordToScene(double x, double y, float m_viewport[], const Eig
 
 bool TriangleIntersection(const Eigen::Vector3d& source, const Eigen::Vector3d& dir, const Eigen::Matrix3d& vertices, const Eigen::Vector3d& normal, Eigen::Vector3d& intersectionPoint) {
 	Eigen::Vector3d vv1 = vertices.row(0).transpose() - source;
-	float dist = (normal.dot(vv1)) / normal.dot(dir);
+	double dist = (normal.dot(vv1)) / normal.dot(dir);
 	if (dist > FLT_EPSILON && dist < INFINITY) {
 		Eigen::Vector3d P = source + dir * dist;
 		for (int i = 0; i < 3; i++) {
@@ -254,7 +242,7 @@ bool TriangleIntersection(const Eigen::Vector3d& source, const Eigen::Vector3d& 
 
 bool GetClosestIntersectingFace(igl::opengl::ViewerData* mesh, const Eigen::Matrix4d& meshView, const Eigen::Vector3d& sourcePointScene, const Eigen::Vector3d& dirToScene, Eigen::Vector3d& closestIntersectionToRet, int& closestFaceIndexToRet) {
 	int closestShapeFaceIndex = -1;
-	float closestShapeFaceDist = -1;
+	double closestShapeFaceDist = -1;
 	Eigen::Vector3d closestIntersectionPoint = Eigen::Vector3d::Ones();
 	for (int i = 0; i < mesh->F.rows(); i++) {
 		Eigen::Matrix3d vertices;
@@ -265,7 +253,7 @@ bool GetClosestIntersectingFace(igl::opengl::ViewerData* mesh, const Eigen::Matr
 		Eigen::Vector3d intersectionPoint;
 		bool intersect = TriangleIntersection(sourcePointScene, dirToScene, vertices, mesh->F_normals.row(i), intersectionPoint);
 		if (intersect) {
-			float dist = (intersectionPoint - sourcePointScene).norm();
+			double dist = (intersectionPoint - sourcePointScene).norm();
 			if (closestShapeFaceIndex == -1 || dist < closestShapeFaceDist) {
 				closestShapeFaceIndex = i;
 				closestShapeFaceDist = dist;
@@ -278,18 +266,16 @@ bool GetClosestIntersectingFace(igl::opengl::ViewerData* mesh, const Eigen::Matr
 	return closestShapeFaceIndex != -1;
 }
 
-float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y) {
-	// TODO section
-	ClearPickedShapes(pickingViewport);
-	y = viewportDims(3) - y;
-	float viewportf[] = { viewportDims(0), viewportDims(1), viewportDims(2), viewportDims(3) };
+float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, std::vector<std::pair<int, int>> stencilLayers, int x, int y) {
+	y = viewportDims.w() - y;
+	float viewportf[] = { (float)viewportDims(0), (float)viewportDims(1), (float)viewportDims(2), (float)viewportDims(3) };
 	Eigen::Matrix4d sceneView = PV * MakeTransScaled();
 	int closestShapeIndex = -1;
 	int closestFaceIndex = -1;
-	float closestFaceDist = -1;
+	double closestFaceDist = -1;
 	for (int i = 1; i < data_list.size(); i++) {
 		igl::opengl::ViewerData* mesh = data_list[i];
-		if (!ShouldRenderViewerData(*mesh, viewport)) {
+		if (!ShouldRenderViewerData(*mesh, sectionIndex, layerIndex)) {
 			continue;
 		}
 		Eigen::Matrix4d meshView = sceneView * mesh->MakeTransScaled();
@@ -309,8 +295,7 @@ float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewpor
 	if (closestShapeIndex != -1) {
 		selected_data_index = closestShapeIndex;
 		pShapes.push_back(selected_data_index);
-		data_list[selected_data_index]->AddViewport(pickingViewport);
+		data_list[selected_data_index]->AddSectionLayers(stencilLayers);
 	}
-	
-	return closestFaceDist;
+	return (float)closestFaceDist;
 }

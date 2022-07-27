@@ -14,6 +14,8 @@
 #include "../DrawBuffer.h"
 #include "../Camera.h"
 #include "../ViewerData.h"
+#include <igl/opengl/glfw/WindowSection.h>
+#include <igl/opengl/glfw/SectionLayer.h>
 
 struct GLFWwindow;
 
@@ -101,11 +103,11 @@ public:
 // Callbacks
 //	 double Picking(double x, double y);
 	 inline void Animate() { scn->Animate(); };
-	IGL_INLINE bool key_pressed(unsigned int unicode_key, int modifier);
+	//IGL_INLINE bool key_pressed(unsigned int unicode_key, int modifier);
 	IGL_INLINE void resize(GLFWwindow* window,int w, int h); // explicitly set window size
 	IGL_INLINE void post_resize(GLFWwindow* window, int w, int h); // external resize due to user interaction
     void SetScene(igl::opengl::glfw::Viewer* scn);
-	void UpdatePosition(double xpos, double ypos);
+	//void UpdatePosition(double xpos, double ypos);
 	inline igl::opengl::glfw::Viewer* GetScene() {
 		return scn;
 	}
@@ -114,32 +116,32 @@ public:
 
     void UpdatePress(float xpos, float ypos);
 
-    int AddCamera(const Eigen::Vector3d &pos, igl::opengl::CameraData cameraData,
-                   int infoIndx = -1);
+    int AddCamera(const Eigen::Vector3d &pos, igl::opengl::CameraData cameraData);
 
-    void AddViewport(int left, int bottom, int width, int height);
+    void AddSection(int left, int bottom, int width, int height, int buffIndex,
+        bool createStencilLayer, bool createScissorsLayer);
 
-    unsigned int AddBuffer(int infoIndx);
+    //unsigned int AddBuffer(int infoIndx);
 
-    int Create2Dmaterial(int infoIndx, int code);
+    //int Create2Dmaterial(int infoIndx, int code);
 
-    void AddDraw(int viewportIndx, int cameraIndx, int shaderIndx, int buffIndx, unsigned int flags);
+    void AddDraw(int sectionIndex, int layerIndex, int buffIndx, unsigned int flags);
 
-    void CopyDraw(int infoIndx, int property, int indx);
+    //void CopyDraw(int infoIndx, int property, int indx);
 
-    void SetViewport(int left, int bottom, int width, int height, int indx);
+    //void SetViewport(int left, int bottom, int width, int height, int indx);
 
-    inline void BindViewport2D(int indx) { drawInfos[indx]->SetFlags(is2D); }
+    //inline void BindViewport2D(int indx) { drawInfos[indx]->SetFlags(is2D); }
 
     void MoveCamera(int cameraIndx, int type, float amt);
 
-    bool Picking(int x, int y, int cameraIndex);
+    bool Picking(int x, int y);
 
-    void OutLine();
+    //void OutLine();
 
-    void PickMany(int x, int y, int cameraIndex);
+    void PickMany(int x, int y);
 
-    void MouseProccessing(int button, int cameraIndex);
+    void MouseProccessing(int button);
 
     inline size_t CamerasCount() const { return cameras.size(); }
 
@@ -151,40 +153,35 @@ public:
 
     inline float GetAngle(int cameraIndx) { return cameras[cameraIndx]->GetAngle(); }
 
-    inline void SetDrawFlag(int infoIndx, unsigned int flag) { drawInfos[infoIndx]->SetFlags(flag); }
-
-    inline void ClearDrawFlag(int infoIndx, unsigned int flag) { drawInfos[infoIndx]->ClearFlags(flag); }
-
-    inline DrawInfo& GetDrawInfo(int index) { return *drawInfos[index]; }
-
     inline void Pressed() { isPressed = !isPressed; }
 
     inline bool IsPressed() const { return isPressed; }
 
-    inline void FreeShapes(int viewportIndx) { scn->ClearPickedShapes(viewportIndx); };
+    //inline void FreeShapes(int viewportIndx) { scn->ClearPickedShapes(viewportIndx); };
 
-    bool CheckViewport(int x, int y, int viewportIndx);
+    bool CheckSection(int x, int y, int sectionIndex);
 
-    bool UpdateViewport(int viewport);
+    bool UpdateSection(int section);
 
-    inline int GetViewportsSize() { return viewports.size(); }
+    inline int GetSectionsSize() { return (int)windowSections.size(); }
+
+    inline WindowSection& GetSection(int sectionIndex) { return *windowSections[sectionIndex]; }
+
+    inline WindowSection& GetCurrentSection() { return *windowSections[currentSection]; }
+
+    inline std::vector<WindowSection*>& GetSections() { return windowSections; }
 
     float CalcMoveCoeff(int cameraIndx, int width);
 
-    void SetBuffers();
+    //void SetBuffers();
 
     inline void UpdateZpos(int ypos) { zrel = ypos; }
 
-    inline void ClearPickedShapes(int viewportIndx) {
-        scn->ClearPickedShapes(viewportIndx);
-        isMany = false;
-    }
-
-    inline void UnPick(int viewportIndx) {
+    inline void UnPick() {
         // Changed: clear isMany also
         isPicked = false;
         isMany = false;
-        scn->ClearPickedShapes(viewportIndx);
+        scn->ClearPickedShapes(GetStencilTestLayersIndexes());
     }
     inline bool IsPicked() { return isPicked; }
     inline bool IsMany() const { return isMany; }
@@ -199,16 +196,40 @@ public:
     inline void finishSelect() {
         isSelecting = false;
     }
-    bool TrySinglePicking(int x, int y, int cameraIndex);
+    bool TrySinglePicking(int x, int y);
 
+    std::vector<std::pair<int, int>> GetSceneLayersIndexes() {
+        std::vector<std::pair<int, int>> layers;
+        for (int i = 0; i < GetSectionsSize(); i++) {
+            layers.push_back(std::pair<int, int>(i, windowSections[i]->GetSceneLayerIndex()));
+        }
+        return layers;
+    }
+
+    std::vector<std::pair<int, int>> GetScissorsTestLayersIndexes() {
+        std::vector<std::pair<int, int>> layers;
+        for (int i = 0; i < GetSectionsSize(); i++) {
+            layers.push_back(std::pair<int, int>(i, windowSections[i]->GetScissorTestLayerIndex()));
+        }
+        return layers;
+    }
+
+    std::vector<std::pair<int, int>> GetStencilTestLayersIndexes() {
+        std::vector<std::pair<int, int>> layers;
+        for (int i = 0; i < GetSectionsSize(); i++) {
+            layers.push_back(std::pair<int, int>(i, windowSections[i]->GetStencilTestLayerIndex()));
+        }
+        return layers;
+    }
 
 private:
     // Stores all the viewing options
 //    std::vector<igl::opengl::ViewerCore> core_list;
+    std::vector<WindowSection*> windowSections;
     std::vector<igl::opengl::Camera*> cameras;
     igl::opengl::glfw::Viewer* scn;
-    std::vector<Eigen::Vector4i> viewports;
-    std::vector<DrawInfo *> drawInfos;
+    //std::vector<Eigen::Vector4i> viewports;
+    //std::vector<DrawInfo *> drawInfos;
     std::vector<igl::opengl::DrawBuffer*> buffers;
 	size_t selected_core_index;
 	int next_core_id;
@@ -221,7 +242,7 @@ private:
     bool isSelecting;
     int materialIndx2D;
     bool isPressed;
-    int currentViewport;
+    int currentSection;
 	unsigned int next_property_id = 1;
 	float highdpi;
 	float depth;
@@ -230,12 +251,12 @@ private:
 	igl::opengl::glfw::imgui::ImGuiMenu* menu;
 	double z;
 
-    void draw_by_info(int info_index = 1);
+    void draw_by_info(int sectionIndex, int layerIndex, int info_index, int width, int height);
 
-    void ActionDraw(int viewportIndx);
+    //void ActionDraw(int viewportIndx);
 
     void Clear(float r, float g, float b, float a, unsigned int flags);
 
-    void SwapDrawInfo(int indx1, int indx2);
+    //void SwapDrawInfo(int indx1, int indx2);
 };
 #endif

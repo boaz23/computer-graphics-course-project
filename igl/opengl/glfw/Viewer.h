@@ -83,21 +83,18 @@ namespace glfw
       int AddLayer();
 
       void ChangeCubemapImage(std::string filePath);
-
   protected:
-      virtual int Viewer::InitSelectedShape(int type, int parent, unsigned int mode, int viewport, int shaderIndex);
-
+      virtual int Viewer::InitSelectedShape(int type, int parent, unsigned int mode, int shaderIndex, std::vector<std::pair<int, int>> sectionLayers);
   public:
-      // TODO: Remove the viewport argument (add it manually in project)
-      int AddShape(int type, int parent, unsigned int mode, int shaderIndex, int viewport, const ViewerDataCreateFunc dataCreator);
-      IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int shaderIndex, int viewport)
+      virtual int AddShape(int type, int parent, unsigned int mode, int shaderIndex, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers);
+      IGL_INLINE int AddShape(int type, int parent, unsigned int mode, int shaderIndex, std::vector<std::pair<int, int>> sectionLayers)
       {
-          return AddShape(type, parent, mode, viewport, shaderIndex, std::bind(&Viewer::DefualtViewerDataCreator, this));
+          return AddShape(type, parent, mode, shaderIndex, std::bind(&Viewer::DefualtViewerDataCreator, this), sectionLayers);
       }
-      int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, int viewport, const ViewerDataCreateFunc dataCreator);
-      IGL_INLINE int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, int viewport)
+      virtual int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers);
+      IGL_INLINE int AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, int shaderIndex, std::vector<std::pair<int, int>> sectionLayers)
       {
-          return AddShapeFromFile(fileName, parent, mode, shaderIndex, viewport, std::bind(&Viewer::DefualtViewerDataCreator, this));
+          return AddShapeFromFile(fileName, parent, mode, shaderIndex, std::bind(&Viewer::DefualtViewerDataCreator, this), sectionLayers);
       }
       virtual void WhenTranslate(float dx, float dy) {}
       virtual void WhenRotate(float dx, float dy) {}
@@ -218,20 +215,20 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
       void
-      Draw(int shaderIndx, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View, int viewportIndx,
+      Draw(int shaderIndx, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View, int sectionIndex, int layerIndex,
            unsigned int flgs,unsigned int property_id);
 
 
 
-      void ClearPickedShapes(int viewportIndx);
+      void ClearPickedShapes(std::vector<std::pair<int, int>> stencilLayers);
 
       int AddMaterial(unsigned int *texIndices, unsigned int *slots, unsigned int size);
 
       Eigen::Matrix4d GetPriviousTrans(const Eigen::Matrix4d &View, unsigned int index);
 
       float
-      AddPickedShapes(const Eigen::Matrix4d &PV, const Eigen::Vector4i &viewport, int viewportIndx, int left, int right,
-                      int up, int bottom, int newViewportIndx);
+      AddPickedShapes(const Eigen::Matrix4d &PV, const Eigen::Vector4i &viewport, int sectionIndex, int layerIndex, int left, int right,
+                      int up, int bottom, std::vector<std::pair<int, int>> stencilLayers);
 
       template<typename T> bool AllPickedShapesSameValue(std::function<T(const ViewerData&)> valueFunc) const
       {
@@ -255,7 +252,7 @@ public:
       }
 
       void
-      MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat, int viewportIndx);
+      MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat);
 
       virtual void WhenTranslate(const Eigen::Matrix4d &preMat, float dx, float dy);
 
@@ -269,7 +266,8 @@ public:
       void BindTexture(int texIndx, int slot) { textures[texIndx]->Bind(slot); }
       IGL_INLINE void SetShapeShader(int shpIndx, int shdrIndx) { data_list[shpIndx]->SetShader(shdrIndx); }
       IGL_INLINE void SetShapeStatic(int shpIndx) { data_list[shpIndx]->SetStatic(); }
-      IGL_INLINE void SetShapeViewport(int shpIndx, int vpIndx) { vpIndx>0 ? data_list[shpIndx]->AddViewport(vpIndx) : data_list[shpIndx]->RemoveViewport(~vpIndx); }
+      IGL_INLINE void AddShapeSectionLayers(int shpIndx, std::vector<std::pair<int, int>> sectionLayers) { data_list[shpIndx]->AddSectionLayers(sectionLayers); }
+      IGL_INLINE void RemoveShapeSectionLayers(int shpIndx, std::vector<std::pair<int, int>> sectionLayers) { data_list[shpIndx]->RemoveSectionLayers(sectionLayers); }
       inline void UpdateNormal(unsigned char data[]) { pickedNormal = (Eigen::Vector3d(data[0], data[1], data[2])).normalized(); }
       IGL_INLINE void SetShapeMaterial(int shpIndx, int materialIndx) { data_list[shpIndx]->SetMaterial(materialIndx); }
 
@@ -277,26 +275,30 @@ public:
 
       void SetShader_point_overlay(const std::string &fileName);
 
-      int AddShapeCopy(int shpIndx, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport = 0);
+      int AddShapeCopy(int shpIndx, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers);
 
       void ShapeTransformation(int type, float amt, int mode);
 
       virtual float
-          Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y);
-      inline void UnPick() { selected_data_index = -1; pShapes.clear(); }
+          Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, std::vector<std::pair<int, int>> stencilLayers, int x, int y);
+      //inline void UnPick() { selected_data_index = -1; pickedShapes.clear(); }
 
       bool load_mesh_from_data(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const Eigen::MatrixXd &UV_V,
                                const Eigen::MatrixXi &UV_F, const ViewerDataCreateFunc dataCreator);
 
       int AddShapeFromData(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const Eigen::MatrixXd &UV_V,
-                           const Eigen::MatrixXi &UV_F, int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport);
+                           const Eigen::MatrixXi &UV_F, int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers);
 
       int AddShader(const std::string &Vertex_Shader, const std::string &Fragment_shader);
 
       void SetParent(int indx, int newValue, bool savePosition);
 
+      virtual int GetPickingShaderIndex() {
+          return -1;
+      };
+
   protected:
-      virtual bool ShouldRenderViewerData(const ViewerData& data, const int viewportIndx) const;
+      virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const;
       Texture* Viewer::AddTexture_Core(const std::string& textureFileName, int dim);
   };
 

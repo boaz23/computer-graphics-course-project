@@ -7,29 +7,18 @@
 #include <Eigen/Core>
 struct DrawInfo
 {
-    int viewportIndx;
-    int cameraIndx;
-    int shaderIndx;
     int bufferIndx;
     unsigned int flags;
     unsigned int property_id;
     Eigen::Vector4f Clear_RGBA;
 
 
-    DrawInfo(int view, int camera, int shader, int buff,unsigned int _flags,unsigned int _property_id)
+    DrawInfo(int buff,unsigned int _flags,unsigned int _property_id)
     {
-        viewportIndx = view;
-        cameraIndx = camera;
-        shaderIndx = shader;
         bufferIndx = buff;
         flags = _flags;
         property_id = _property_id;
         Clear_RGBA = Eigen::Vector4f (1,1,1,1);
-    }
-
-    inline void SetCamera(int indx)
-    {
-        cameraIndx = indx;
     }
 
     inline void SetFlags(unsigned int value) { flags = flags | value; }

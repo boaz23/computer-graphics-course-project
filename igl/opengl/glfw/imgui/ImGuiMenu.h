@@ -90,7 +90,7 @@ public:
 //  IGL_INLINE virtual void draw_viewer_window(igl::opengl::glfw::Viewer* viewer, std::vector<igl::opengl::ViewerCore> &core);
 
   // Can be overwritten by `callback_draw_viewer_menu`
-  IGL_INLINE virtual void draw_viewer_menu(Renderer* rndr, igl::opengl::glfw::Viewer &viewer, std::vector<igl::opengl::Camera*> &camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow,std::vector<DrawInfo *> drawInfos);
+  IGL_INLINE virtual void draw_viewer_menu(Renderer* rndr, igl::opengl::glfw::Viewer &viewer, std::vector<igl::opengl::Camera*> &camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow);
 
   // Can be overwritten by `callback_draw_custom_window`
   IGL_INLINE virtual void draw_custom_window() { }

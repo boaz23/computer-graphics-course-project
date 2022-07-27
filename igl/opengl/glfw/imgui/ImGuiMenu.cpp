@@ -161,7 +161,7 @@ IGL_INLINE bool ImGuiMenu::key_up(GLFWwindow* window,int key, int modifiers)
 
 
 
-IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::Viewer &viewer, std::vector<igl::opengl::Camera*> &camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow,std::vector<DrawInfo *> drawInfos)
+IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::Viewer &viewer, std::vector<igl::opengl::Camera*> &camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow)
 {
     bool* p_open = NULL;
     static bool no_titlebar = false;
@@ -472,13 +472,13 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
   }
 
     // Helper for setting viewport specific mesh options
-    auto make_checkbox = [&](const char* label, unsigned int& option)
-    {
-        return ImGui::Checkbox(label,
-            [&]() { return drawInfos[1]->is_set(option); },
-            [&](bool value) { return drawInfos[1]->set(option, value); }
-        );
-    };
+    //auto make_checkbox = [&](const char* label, unsigned int& option)
+    //{
+    //    return ImGui::Checkbox(label,
+    //        [&]() { return drawInfos[1]->is_set(option); },
+    //        [&](bool value) { return drawInfos[1]->set(option, value); }
+    //    );
+    //};
 
   // Draw options
 //  if (ImGui::CollapsingHeader("Draw Options"))
