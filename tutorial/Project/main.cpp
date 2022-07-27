@@ -11,7 +11,7 @@ int main(int argc,char *argv[])
     igl::opengl::glfw::imgui::ImGuiMenu* menu = new igl::opengl::glfw::imgui::ImGuiMenu();
 	igl::opengl::CameraData cameraData(CAMERA_ANGLE, DISPLAY_RATIO, NEAR, FAR);
     Renderer* rndr = new Renderer(cameraData);
-	Project *scn = new Project();  //initializing scene
+	Project *scn = new Project(menu->_trans_slidebar_val);  //initializing scene
 	scn->renderer = rndr;
 	
     Init(disp,menu); //adding callback functions

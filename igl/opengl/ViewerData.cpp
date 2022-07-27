@@ -40,6 +40,7 @@ IGL_INLINE igl::opengl::ViewerData::ViewerData(int layer)
   line_color(0,0,0,1),
   label_color(0,0,0.04,1),
   shininess(35.0f),
+  alpha(0.1f),
   id(-1),
   materialID        (0),
   isCopy            (false),

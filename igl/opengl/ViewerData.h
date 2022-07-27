@@ -303,6 +303,7 @@ public:
 
   // Shape material
   float shininess;
+  float alpha;
 
   // Unique identifier
   int id;

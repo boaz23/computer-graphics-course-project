@@ -112,7 +112,7 @@ IGL_INLINE void Renderer::draw_by_info(int info_index){
     if (info->flags & blend)
     {
         glEnable(GL_BLEND);
-        glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
     else
         glDisable(GL_BLEND);
@@ -128,6 +128,9 @@ IGL_INLINE void Renderer::draw_by_info(int info_index){
         else
             Clear(info->Clear_RGBA.x(), info->Clear_RGBA.y(), info->Clear_RGBA.z(), info->Clear_RGBA.w(),info->flags);
     }
+
+    menu->_is_multipicking = scn->pShapes.size() > 1;
+
     scn->Draw(info->shaderIndx, Proj, View, info->viewportIndx, info->flags,info->property_id);
 }
 
@@ -153,6 +156,11 @@ IGL_INLINE void Renderer::draw( GLFWwindow* window)
 	{
 		menu->pre_draw();
 		menu->callback_draw_viewer_menu();
+
+        if(scn->pShapes.size() > 0)
+            if(menu->_slidebar_changed)
+                for (int pshape : scn->pShapes)
+                    scn->data_list[pshape]->alpha = menu->_trans_slidebar_val;
     }
     int indx = 0;
     for (auto& info : drawInfos)
@@ -515,7 +523,7 @@ IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, std::list<int>x
             if ((1 << indx) & pickingBits) {
                 DrawInfo* new_draw_info = new DrawInfo(indx, 0, 0, 0,
                                                   1 | inAction | depthTest | stencilTest | passStencil | blackClear |
-                                                  clearStencil | clearDepth | onPicking ,
+                                                  clearStencil | clearDepth | onPicking,
                                                   next_property_id);
                 next_property_id <<= 1;
                 //for (auto& data : scn->data_list)
@@ -524,7 +532,7 @@ IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, std::list<int>x
                 //}
                 drawInfos.emplace_back(new_draw_info);
             }
-            DrawInfo* temp = new DrawInfo(indx, 0, 3, 0, (int)(indx < 1) | depthTest | clearDepth ,next_property_id);
+            DrawInfo* temp = new DrawInfo(indx, 0, 3, 0, (int)(indx < 1) | depthTest | clearDepth | blend, next_property_id);
             next_property_id <<= 1;
             drawInfos.emplace_back(temp);
             indx++;

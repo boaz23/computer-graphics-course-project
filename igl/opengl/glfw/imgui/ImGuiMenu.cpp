@@ -55,6 +55,9 @@ IGL_INLINE void ImGuiMenu::init(Display* disp)
     ImGuiStyle& style = ImGui::GetStyle();
     style.FrameRounding = 5.0f;
     reload_font();
+
+    _trans_slidebar_val = 1.0f;
+    _is_multipicking = false;
   }
 }
 
@@ -272,10 +275,12 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       ImGui::PopItemWidth();
 
       bool isCurrentLayerHidden = viewer.IsLayerHidden(viewer.currentEditingLayer);
-
       ImGui::Text("State:");
       ImGui::SameLine(0, p);
       ImGui::Text(isCurrentLayerHidden ? "Hidden" : "Shown");
+
+      _slidebar_changed = ImGui::SliderFloat("Set Transperancy", &_trans_slidebar_val, 0.0, 1.0, _is_multipicking ? "" : "%.2f");
+
 
       if (ImGui::Button(isCurrentLayerHidden ? "Show layer" : "Hide layer", fullWidthVec2))
       {
