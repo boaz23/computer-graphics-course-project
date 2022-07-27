@@ -279,14 +279,14 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       ImGui::SameLine(0, p);
       ImGui::Text(isCurrentLayerHidden ? "Hidden" : "Shown");
 
-      _slidebar_changed = ImGui::SliderFloat("Set Transperancy", &_trans_slidebar_val, 0.0, 1.0, _is_multipicking ? "" : "%.2f");
-
-
       if (ImGui::Button(isCurrentLayerHidden ? "Show layer" : "Hide layer", fullWidthVec2))
       {
           viewer.ToggleLayerVisibility(viewer.currentEditingLayer);
       }
   }
+
+  _slidebar_changed = ImGui::SliderFloat("Set Transperancy", &_trans_slidebar_val, 0.0, 1.0, _is_multipicking ? "" : "%.2f");
+
 
   // Viewing options
 //  if (ImGui::CollapsingHeader("Viewing Options"))
