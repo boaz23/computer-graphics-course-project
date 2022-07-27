@@ -428,12 +428,12 @@ IGL_INLINE bool
   }
 
 
-    IGL_INLINE void Viewer::Draw(int shaderIndx, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View, int viewportIndx, unsigned int flgs,unsigned int property_id)
+    IGL_INLINE void Viewer::Draw(int shaderIndx, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View, int sectionIndex, int layerIndex, unsigned int flgs,unsigned int property_id)
     {
 
         Eigen::Matrix4f Normal;
 
-        if (!(staticScene & (1<<viewportIndx)))
+        if (!staticScene)
             Normal = MakeTransScale();
         else
             Normal = Eigen::Matrix4f::Identity();
@@ -441,7 +441,7 @@ IGL_INLINE bool
         for (int i = 0; i < data_list.size(); i++)
         {
             auto shape = data_list[i];
-            if (ShouldRenderViewerData(*shape, viewportIndx))
+            if (ShouldRenderViewerData(*shape, sectionIndex, layerIndex))
             {
 
                 Eigen::Matrix4f Model = shape->MakeTransScale();
@@ -525,13 +525,14 @@ IGL_INLINE bool
         next_data_id +=1;
     }
 
-    int Viewer::AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport)
+    int Viewer::AddShapeFromFile(const std::string& fileName, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
     {
         this->load_mesh_from_file(fileName, dataCreator);
         data()->type = MeshCopy;
         data()->mode = mode;
         data()->shaderID = 1;
-        data()->viewports = 1 << viewport;
+        data()->AddSectionLayers(sectionLayers);
+        //data()->viewports = 1 << viewport;
     /*    data()->is_visible = true;*/
         data()->show_lines = 0;
         data()->hide = false;
@@ -540,7 +541,7 @@ IGL_INLINE bool
         return data_list.size() - 1;
     }
 
-    int Viewer::AddShape(int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport)
+    int Viewer::AddShape(int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
     {
       switch(type){
 // Axis, Plane, Cube, Octahedron, Tethrahedron, LineCopy, MeshCopy
@@ -576,7 +577,8 @@ IGL_INLINE bool
       data()->type = type;
       data()->mode = mode;
       data()->shaderID = 1;
-      data()->viewports = 1 << viewport;
+      data()->AddSectionLayers(sectionLayers);
+      //data()->viewports = 1 << viewport;
       //data()->is_visible = 0x1;
       data()->show_lines = 0;
       data()->show_overlay = 0;
@@ -597,13 +599,14 @@ IGL_INLINE bool
 
 
 
-    int Viewer::AddShapeCopy(int shpIndx, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport )
+    int Viewer::AddShapeCopy(int shpIndx, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
     {
         load_mesh_from_data(data_list[shpIndx]->V, data_list[shpIndx]->F,data_list[shpIndx]->V_uv, data_list[shpIndx]->F_uv, dataCreator);
         data()->type = data_list[shpIndx]->type;
         data()->mode = mode;
         data()->shaderID = data_list[shpIndx]->shaderID;
-        data()->viewports = 1 << viewport;
+        data()->AddSectionLayers(sectionLayers);
+        //data()->viewports = 1 << viewport;
         //data()->is_visible = true;
         data()->show_lines = 0;
         data()->show_overlay = 0;
@@ -616,13 +619,14 @@ IGL_INLINE bool
                                  const Eigen::MatrixXi &F,
                                  const Eigen::MatrixXd &UV_V,
                                  const Eigen::MatrixXi &UV_F
-                                 ,int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, int viewport)
+                                 ,int type, int parent, unsigned int mode, const ViewerDataCreateFunc dataCreator, std::vector<std::pair<int, int>> sectionLayers)
     {
         load_mesh_from_data(V, F, UV_V, UV_F, dataCreator);
         data()->type = type;
         data()->mode = mode;
         data()->shaderID = 1;
-        data()->viewports = 1 << viewport;
+        data()->AddSectionLayers(sectionLayers);
+        //data()->viewports = 1 << viewport;
        // data()->is_visible = true;
         data()->show_lines = 0;
         data()->show_overlay = 0;
@@ -631,25 +635,25 @@ IGL_INLINE bool
         return data_list.size() - 1;
     }
 
-    void Viewer::ClearPickedShapes(int viewportIndx)
+    void Viewer::ClearPickedShapes(std::vector<std::pair<int, int>> stencilLayers)
     {
         for (int pShape : pShapes)
         {
-            data_list[pShape]->RemoveViewport(viewportIndx);
+            data_list[pShape]->RemoveSectionLayers(stencilLayers);
         }
         selected_data_index = 0;
         pShapes.clear();
     }
 
     //return coordinates in global system for a tip of arm position is local system
-    void Viewer::MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat,int viewportIndx)
+    void Viewer::MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat)
     {
         // Changed: modified to support mesh transformations and multipicking
         // TODO no scale?
         Eigen::Matrix4d scnMat = Eigen::Matrix4d::Identity();
-        if (selected_data_index <= 0 && !(staticScene & (1 << viewportIndx)))
+        if (selected_data_index <= 0 && !staticScene)
             scnMat = MakeTransd();
-        else if (!(staticScene & (1 << viewportIndx)))
+        else if (!staticScene)
             scnMat = (MakeTransd() * GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index));
         else if(selected_data_index > 0)
             scnMat = (GetPriviousTrans(Eigen::Matrix4d::Identity(),selected_data_index ));
@@ -662,9 +666,9 @@ IGL_INLINE bool
                 WhenTranslate(cameraMat * scnMat, -xrel / movCoeff, yrel / movCoeff);
             }
             // TODO apply to camera
-            if (pShapes.size() == 0) {
-                WhenTranslate(cameraMat * scnMat, -xrel / movCoeff, yrel / movCoeff);
-            }
+            //if (pShapes.size() == 0) {
+            //    WhenTranslate(cameraMat * scnMat, -xrel / movCoeff, yrel / movCoeff);
+            //}
         }
         else
         {
@@ -678,9 +682,9 @@ IGL_INLINE bool
                     WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
                 }
                 // TODO apply to camera
-                if (pShapes.size() == 0) {
-                    WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
-                }
+                //if (pShapes.size() == 0) {
+                //    WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
+                //}
             }
             else
             {
@@ -741,7 +745,7 @@ IGL_INLINE bool
 
     }
 
-    float Viewer::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y)
+    float Viewer::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, std::vector<std::pair<int, int>> stencilLayers, int x, int y)
     {
         // Changed: default picking
         return -1.0;
@@ -798,7 +802,7 @@ IGL_INLINE bool
             return Model;
     }
 
-    float Viewer::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int viewportIndx, int left, int right, int up, int bottom,int newViewportIndx)
+    float Viewer::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right, int up, int bottom, std::vector<std::pair<int, int>> stencilLayers)
     {
         //not correct when the shape is scaled
         Eigen::Matrix4d MVP = PV * MakeTransd();
@@ -811,10 +815,10 @@ IGL_INLINE bool
             Eigen::Vector4d pos = MVP * Model * Eigen::Vector4d(0,0,0,1);
             float xpix = (1 + pos.x() / pos.z()) * viewport.z() / 2;
             float ypix = (1 + pos.y() / pos.z()) * viewport.w() / 2;
-            if (ShouldRenderViewerData(*data_list[i], viewportIndx) && xpix < right && xpix > left && ypix < bottom && ypix > up)
+            if (ShouldRenderViewerData(*data_list[i], sectionIndex, layerIndex) && xpix < right && xpix > left && ypix < bottom && ypix > up)
             {
                 pShapes.push_back(i);
-                data_list[i]->AddViewport(newViewportIndx);
+                data_list[i]->AddSectionLayers(stencilLayers);
                 std::cout << i << ", ";
                 selected_data_index = i;
                 isFound = true;
@@ -830,9 +834,9 @@ IGL_INLINE bool
             return -1;
     }
 
-    bool Viewer::ShouldRenderViewerData(const ViewerData& data, const int viewportIndx) const
+    bool Viewer::ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const
     {
-        return !IsLayerHidden(data.layer) && data.Is2Render(viewportIndx);
+        return !IsLayerHidden(data.layer) && data.Is2Render(sectionIndex, layerIndex);
     }
 
     Texture* Viewer::AddTexture_Core(const std::string& textureFileName, int dim)

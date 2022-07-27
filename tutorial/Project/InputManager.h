@@ -18,15 +18,14 @@
 		glfwGetCursorPos(window, &x2, &y2);
 		if (action == GLFW_PRESS)
 		{
-			rndr->UpdatePress(x2, y2);
+			rndr->UpdatePress((float)x2, (float)y2);
 			if (button == GLFW_MOUSE_BUTTON_LEFT)
 				rndr->Pressed();
 			// if not in select many mode and shift not pressed -> single picking
 			if (!shiftPressed && !rndr->IsMany()) {
-				// TODO this need to be camera per section
-				if (rndr->Picking((int)x2, (int)y2, scn->selectedCameraIndex))
+				if (rndr->Picking((int)x2, (int)y2))
 				{
-					rndr->UpdatePosition(x2, y2);
+					rndr->UpdatePosition((float)x2, (float)y2);
 				}
 			}
 			// start select many mode
@@ -39,13 +38,13 @@
 			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 			// if exiting select many mode apply selection
 			if (rndr->isInSelectMode()) {
-				rndr->PickMany((int)x2, (int)y2, scn->selectedCameraIndex);
+				rndr->PickMany((int)x2, (int)y2);
 				rndr->finishSelect();
 			}
 			else {
 				// if not in selection mode but many picked check if this is a click or drag and 
 				// single pick if click(else nothing will happend and usual drag will continue)
-				rndr->TrySinglePicking((int)x2, (int)y2, scn->selectedCameraIndex);
+				rndr->TrySinglePicking((int)x2, (int)y2);
 			}
 		}
 	}
@@ -57,9 +56,8 @@
 		if (rndr->IsPicked())
 		{
 			rndr->UpdateZpos((int)yoffset);
-			//  TODO section
 			// TODO zoom on object 
-			rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE, scn->selectedCameraIndex);
+			rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE);
 		}
 	}
 	
@@ -73,22 +71,16 @@
 
 		rndr->UpdatePosition((float)xpos,(float)ypos);
 
-		// TODO section
-		if (rndr->CheckViewport(xpos, ypos, 0))
+		bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+		if (!shiftPressed)
 		{
-			bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
-			if (!shiftPressed)
+			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
 			{
-				if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
-				{
-					// TODO section
-					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT, scn->selectedCameraIndex);
-				}
-				else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-				{
-					// TODO section
-					rndr->MouseProccessing(GLFW_MOUSE_BUTTON_LEFT, scn->selectedCameraIndex);
-				}
+				rndr->MouseProccessing(GLFW_MOUSE_BUTTON_RIGHT);
+			}
+			else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+			{
+				rndr->MouseProccessing(GLFW_MOUSE_BUTTON_LEFT);
 			}
 		}
 	}
@@ -109,12 +101,13 @@
 		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
+		int currentCamera = rndr->GetCurrentSection().GetCamera();
 		if (action == GLFW_PRESS || action == GLFW_REPEAT)
 		{
 			switch (key)
 			{
 			case GLFW_KEY_ESCAPE:
-				rndr->UnPick(2);
+				rndr->UnPick();
 				break;
 			case GLFW_KEY_SPACE:
 				if (scn->IsActive())
@@ -124,40 +117,40 @@
 				break;
 
 			case GLFW_KEY_UP:
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->xRotate, 0.05f);
+				rndr->MoveCamera(currentCamera, scn->xRotate, 0.05f);
 				break;
 			case GLFW_KEY_DOWN:
 				//scn->shapeTransformation(scn->xGlobalRotate,-5.f);
 				//cout<< "down: "<<endl;
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->xRotate, -0.05f);
+				rndr->MoveCamera(currentCamera, scn->xRotate, -0.05f);
 				break;
 			case GLFW_KEY_LEFT:
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->yRotate, 0.05f);
+				rndr->MoveCamera(currentCamera, scn->yRotate, 0.05f);
 				break;
 			case GLFW_KEY_RIGHT:
 				//scn->shapeTransformation(scn->xGlobalRotate,-5.f);
 				//cout<< "down: "<<endl;
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->yRotate, -0.05f);
+				rndr->MoveCamera(currentCamera, scn->yRotate, -0.05f);
 				break;
 			case GLFW_KEY_Q:
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->yTranslate, 0.25f);
+				rndr->MoveCamera(currentCamera, scn->yTranslate, 0.25f);
 				break;
 			case GLFW_KEY_E:
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->yTranslate, -0.25f);
+				rndr->MoveCamera(currentCamera, scn->yTranslate, -0.25f);
 				break;
 			case GLFW_KEY_A:
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->xTranslate, -0.25f);
+				rndr->MoveCamera(currentCamera, scn->xTranslate, -0.25f);
 				break;
 			
 			case GLFW_KEY_D:
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->xTranslate, 0.25f);
+				rndr->MoveCamera(currentCamera, scn->xTranslate, 0.25f);
 				break;
 			
 			case GLFW_KEY_S:
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->zTranslate, 0.5f);
+				rndr->MoveCamera(currentCamera, scn->zTranslate, 0.5f);
 				break;
 			case GLFW_KEY_W:
-				rndr->MoveCamera(scn->selectedCameraIndex, scn->zTranslate, -0.5f);
+				rndr->MoveCamera(currentCamera, scn->zTranslate, -0.5f);
 				break;
 			case GLFW_KEY_1:
 				std::cout << "picked 1\n";
@@ -184,22 +177,22 @@
 		}
 	}
 
-	void SetDrawCamera_DefaultViewport(Renderer* rndr, Project* scn, int cameraIndex)
-	{
-		// TODO section
-		for (int i = 0; i < 4; i++) {
-			rndr->GetDrawInfo(i).cameraIndx = cameraIndex;
-		}
-	}
+	//void SetDrawCamera_DefaultViewport(Renderer* rndr, Project* scn, int cameraIndex)
+	//{
+	//	for (auto& section : rndr->GetSections()) {
+	//		section->SetCamera(cameraIndex);
+	//	}
+	//}
 
 	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta)
 	{
-		size_t selectedCameraIndex = scn->selectedCameraIndex;
-		size_t cameraIndex = addCyclic<int>(static_cast<int>(selectedCameraIndex), delta, rndr->CamerasCount());
-		scn->selectedCameraIndex = cameraIndex;
+		WindowSection& section = rndr->GetCurrentSection();
+		int selectedCameraIndex = section.GetCamera();
+		int cameraIndex = (int)addCyclic<int>(selectedCameraIndex, delta, rndr->CamerasCount());
 		scn->CameraMeshUnhide(selectedCameraIndex, rndr->GetCamera(selectedCameraIndex));
 		scn->CameraMeshHide(cameraIndex);
-		SetDrawCamera_DefaultViewport(rndr, scn, static_cast<int>(cameraIndex));
+		section.SetCamera(cameraIndex);
+		//SetDrawCamera_DefaultViewport(rndr, scn, static_cast<int>(cameraIndex));
 	}
 
 

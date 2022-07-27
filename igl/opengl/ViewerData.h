@@ -19,6 +19,7 @@
 #include <Eigen/Core>
 #include <memory>
 #include <vector>
+#include <set>
 
 // Alec: This is a mesh class containing a variety of data types (normals,
 // overlays, material colors, etc.)
@@ -287,7 +288,8 @@ public:
   unsigned int show_vertex_labels;
   unsigned int show_face_labels;
   unsigned int show_custom_labels;
-  unsigned int viewports;
+  std::set<std::pair<int, int>> sectionLayers;
+  //unsigned int viewports;
   unsigned int mode;
   unsigned int type;
   bool hide;
@@ -323,11 +325,20 @@ public:
     const bool invert_normals,
     igl::opengl::MeshGL& meshgl);
 
-    IGL_INLINE void AddViewport(int viewport) { viewports = viewports | (1<<viewport); }
+    IGL_INLINE void AddSectionLayers(std::vector<std::pair<int, int>> sectionLayersToAdd) { 
+        sectionLayers.insert(sectionLayersToAdd.cbegin(), sectionLayersToAdd.cend());
+    }
 
-    IGL_INLINE void RemoveViewport(int viewport) { viewports = viewports & ~(1 << viewport); }
+    IGL_INLINE void RemoveSectionLayers(std::vector<std::pair<int, int>> sectionLayersToRemove) { 
+        for (auto& layer : sectionLayersToRemove) {
+            sectionLayers.erase(layer);
+        }
+    }
 
-    IGL_INLINE bool Is2Render(int viewport) const { return  (viewports & (1 << viewport)) && !hide ; }
+    IGL_INLINE bool Is2Render(int sectionIndex, int layerIndex) const { 
+        return sectionLayers.find({ sectionIndex, layerIndex }) != sectionLayers.end() 
+            && !hide;
+    }
 
     inline bool IsStatic() { return isStatic; }
     inline void SetStatic() { isStatic = !isStatic; }

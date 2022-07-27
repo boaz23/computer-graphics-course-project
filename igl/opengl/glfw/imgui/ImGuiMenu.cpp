@@ -159,7 +159,7 @@ IGL_INLINE bool ImGuiMenu::key_up(GLFWwindow* window,int key, int modifiers)
 
 
 
-IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::Viewer &viewer, std::vector<igl::opengl::Camera*> &camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow,std::vector<DrawInfo *> drawInfos)
+IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::Viewer &viewer, std::vector<igl::opengl::Camera*> &camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow)
 {
     bool* p_open = NULL;
     static bool no_titlebar = false;
@@ -227,16 +227,16 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
        // viewer.AddShape(viewer.xCylinder,-1,viewer.TRIANGLES);
         viewer.open_dialog_load_mesh();
       if (viewer.data_list.size() > viewer.parents.size())
-      {
-          
+      {          
           viewer.parents.push_back(-1);
-          viewer.SetShapeViewport(viewer.selected_data_index, 0);
+          viewer.AddShapeSectionLayers(viewer.selected_data_index, viewer.renderer->GetSceneLayersIndexes());
+          // TODO what?
           viewer.SetShapeShader(viewer.selected_data_index, 2);
           viewer.SetShapeMaterial(viewer.selected_data_index,0);
           //viewer.data_list.back()->set_visible(false, 1);
           //viewer.data_list.back()->set_visible(true, 2);
           viewer.data_list.back()->UnHide();
-          viewer.data_list.back()->show_faces = 3;
+          viewer.data_list.back()->show_faces = ~unsigned(0);
           viewer.data()->mode = viewer.TRIANGLES;
           viewer.selected_data_index = savedIndx;
       }
@@ -329,13 +329,13 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
   }
 
     // Helper for setting viewport specific mesh options
-    auto make_checkbox = [&](const char* label, unsigned int& option)
-    {
-        return ImGui::Checkbox(label,
-            [&]() { return drawInfos[1]->is_set(option); },
-            [&](bool value) { return drawInfos[1]->set(option, value); }
-        );
-    };
+    //auto make_checkbox = [&](const char* label, unsigned int& option)
+    //{
+    //    return ImGui::Checkbox(label,
+    //        [&]() { return drawInfos[1]->is_set(option); },
+    //        [&](bool value) { return drawInfos[1]->set(option, value); }
+    //    );
+    //};
 
   // Draw options
 //  if (ImGui::CollapsingHeader("Draw Options"))

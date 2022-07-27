@@ -10,7 +10,7 @@ const constexpr float DISPLAY_RATIO = (float)DISPLAY_WIDTH / (float)DISPLAY_HEIG
 const constexpr float CAMERA_ANGLE = 45.0f;
 const constexpr float NEAR = 1.0f;
 const constexpr float FAR = 150.0f;
-const constexpr int infoIndx = 2;
+//const constexpr int infoIndx = 2;
 
 enum class CameraKind {
 	Animation,
@@ -21,8 +21,6 @@ class Project : public igl::opengl::glfw::Viewer
 {
 
 public:
-	size_t selectedCameraIndex;
-
 	/// <summary>
 	/// Whether the scene is currently playing or not
 	/// </summary>
@@ -39,22 +37,22 @@ public:
 	void WhenRotate();
 	void WhenTranslate();
 	void Animate() override;
-	void ScaleAllShapes(float amt, int viewportIndx);
-
 	void AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
 	void CameraMeshHide(int cameraIndex);
 	void CameraMeshUnhide(int cameraIndex, const Movable &transformations);
 
 	inline bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
 	
-	float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int viewport, int pickingViewport, int x, int y);
+	float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, std::vector<std::pair<int, int>> stencilLayers, int x, int y) override;
 	~Project(void);
+	inline int GetPickingShaderIndex() override { return pickingShaderIndex; }
 
 protected:
-	bool ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int viewportIndx) const override;
+	bool ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex) const override;
 
 private:
 	int shaderIndex_basic;
+	int pickingShaderIndex;
 };
 
 
