@@ -399,22 +399,29 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       ImGui::PopItemWidth();
   }
 
-  // Objects Transperancy
-  if (project->pShapes.size() > 0)
-      _trans_slidebar_val = project->data_list[project->pShapes[project->pShapes.size() - 1]]->alpha;
+  if (project != nullptr && ImGui::CollapsingHeader("Transperancy", ImGuiTreeNodeFlags_DefaultOpen))
+  {
+      ImGui::Text("Alpha:");
+      ImGui::SameLine(0, p);
 
-  bool _hide_slide_val = false;
+      // Objects Transperancy
+      if (project->pShapes.size() > 0)
+          _trans_slidebar_val = project->data_list[project->pShapes[project->pShapes.size() - 1]]->alpha;
 
-  if (project->pShapes.size() > 1) {
-      for (int pshape : project->pShapes)
-          if (project->data_list[pshape]->alpha != project->data_list[project->pShapes[0]]->alpha)
-              _hide_slide_val = true;
-  }
+      bool _hide_slide_val = false;
 
-  if(ImGui::SliderFloat("Set Transperancy", &_trans_slidebar_val, 0.0, 1.0, _hide_slide_val ? "" : "%.2f"))
-      if(project->pShapes.size() > 0)
+      if (project->pShapes.size() > 1)
+      {
           for (int pshape : project->pShapes)
-              project->data_list[pshape]->alpha = _trans_slidebar_val;
+              if (project->data_list[pshape]->alpha != project->data_list[project->pShapes[0]]->alpha)
+                  _hide_slide_val = true;
+      }
+
+      if (ImGui::SliderFloat("##alphaSlider", &_trans_slidebar_val, 0.0, 1.0, _hide_slide_val ? "" : "%.2f"))
+          if (project->pShapes.size() > 0)
+              for (int pshape : project->pShapes)
+                  project->data_list[pshape]->alpha = _trans_slidebar_val;
+  }
 
   // Viewing options
 //  if (ImGui::CollapsingHeader("Viewing Options"))
