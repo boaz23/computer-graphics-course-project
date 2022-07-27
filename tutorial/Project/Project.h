@@ -41,8 +41,8 @@ public:
 	void WhenTranslate();
 	void Animate() override;
 	void AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
-	void CameraMeshHide(int cameraIndex);
-	void CameraMeshUnhide(int cameraIndex, const Movable &transformations);
+	void ChangeCameraIndex_ByDelta(int delta);
+	void MoveCamera(std::function<void (Movable &)> transform);
 
 	IGL_INLINE bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
 
@@ -50,7 +50,7 @@ public:
 	
 	float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y) override;
 	~Project(void);
-	inline int GetPickingShaderIndex() override { return pickingShaderIndex; }
+	IGL_INLINE int GetPickingShaderIndex() override { return pickingShaderIndex; }
 
 protected:
 	bool ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex) const override;
@@ -58,6 +58,10 @@ protected:
 private:
 	int shaderIndex_basic;
 	int pickingShaderIndex;
+
+	std::unordered_map<int, int> camerasToMesh;
+
+	int GetMeshIndex(int cameraIndex);
 };
 
 
