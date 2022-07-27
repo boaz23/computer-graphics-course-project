@@ -704,7 +704,7 @@ IGL_INLINE bool
         else if (!staticScene)
             scnMat = (MakeTransd() * GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index));
         else if(selected_data_index > 0)
-            scnMat = (GetPriviousTrans(Eigen::Matrix4d::Identity(),selected_data_index ));
+            scnMat = (GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index));
 
         if (button == 1)
         {
@@ -801,35 +801,46 @@ IGL_INLINE bool
 
     void Viewer::WhenTranslate( const Eigen::Matrix4d& preMat, float dx, float dy)
     {
-        Movable* obj;
-        if (selected_data_index == 0 || data()->IsStatic())
-            obj = (Movable*)this;
-        else  if (selected_data_index > 0) { obj = (Movable *) data(); }
-        obj->TranslateInSystem(preMat.block<3, 3>(0, 0), Eigen::Vector3d(dx, 0, 0));
-        obj->TranslateInSystem(preMat.block<3, 3>(0, 0), Eigen::Vector3d(0, dy, 0));
-        WhenTranslate(dx,dy);
+        Eigen::Matrix3d rot = preMat.block<3, 3>(0, 0);
+        Transform(GetMovableTransformee(), [&rot, &dx, &dy](Movable &movable)
+        {
+            movable.TranslateInSystem(rot, Eigen::Vector3d(dx, 0, 0));
+            movable.TranslateInSystem(rot, Eigen::Vector3d(0, dy, 0));
+        });
     }
 
     void Viewer::WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy)
     {
-        Movable* obj;
-        if (selected_data_index == 0 || data()->IsStatic())
-            obj = (Movable*)this;
-        else  if (selected_data_index > 0) { obj = (Movable*)data(); }
         Eigen::Vector4d xRotation = preMat.transpose() * Eigen::Vector4d(0, 1, 0, 0);
         Eigen::Vector4d yRotation = preMat.transpose() * Eigen::Vector4d(1, 0, 0, 0);
-        obj->RotateInSystem(xRotation.head(3), dx);
-        obj->RotateInSystem(yRotation.head(3), dy);
-        WhenRotate(dx, dy);
+        Transform(GetMovableTransformee(), [&xRotation, &dx, &yRotation, &dy](Movable &movable)
+        {
+            movable.RotateInSystem(xRotation.head(3), dx);
+            movable.RotateInSystem(yRotation.head(3), dy);
+        });
     }
 
     void Viewer::WhenScroll(const Eigen::Matrix4d& preMat, float dy)
     {
-        if (selected_data_index == 0 || data()->IsStatic())
-            this->TranslateInSystem(preMat.block<3,3>(0,0), Eigen::Vector3d(0, 0, dy));
-        else if( selected_data_index > 0)
-            data()->TranslateInSystem(preMat.block<3, 3>(0, 0), Eigen::Vector3d(0, 0, dy));
-        WhenScroll(dy);
+        Eigen::Matrix3d rot = preMat.block<3, 3>(0, 0);
+        Transform(GetMovableTransformee(), [&rot, &dy](Movable &movable)
+        {
+            movable.TranslateInSystem(rot, Eigen::Vector3d(0, 0, dy));
+        });
+    }
+
+    Movable &Viewer::GetMovableTransformee(int shapeIndex)
+    {
+        if (shapeIndex > 0 && !data_list[shapeIndex]->IsStatic())
+        {
+            return *data_list[shapeIndex];
+        }
+        return *this;
+    }
+
+    void Viewer::Transform(Movable &movable, std::function<void(Movable &)> transform)
+    {
+        transform(movable);
     }
 
     int Viewer::AddMaterial(unsigned int texIndices[], unsigned int slots[], unsigned int size)

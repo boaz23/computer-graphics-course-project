@@ -2,6 +2,7 @@
 #include "AnimationCameraData.h"
 #include "igl/opengl/glfw/renderer.h"
 #include "igl/opengl/ViewerData.h"
+#include "igl/opengl/util.h"
 #include <iostream>
 
 
@@ -20,7 +21,8 @@ Project::Project() :
 	isInDesignMode{true}, 
 	isDesignModeView{true}, 
 	shaderIndex_basic{-1},
-	pickingShaderIndex(-1)
+	pickingShaderIndex(-1),
+	camerasToMesh{}
 {
 }
 
@@ -162,36 +164,73 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 				return new AnimationCameraData(currentEditingLayer, cameraIndex);
 			}
 		);
+		camerasToMesh.insert(std::pair<int, int>{cameraIndex, shapeIndex});
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
 		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
 		break;
 	}
 }
 
-void Project::CameraMeshHide(int cameraIndex)
+int Project::GetMeshIndex(int cameraIndex)
 {
-	for (auto vd : data_list)
+	auto meshIt = camerasToMesh.find(cameraIndex);
+	int mesh{ -1 };
+	if (meshIt != camerasToMesh.end())
 	{
-		auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(vd);
-		if (pAnimationCameraData && pAnimationCameraData->cameraIndex == cameraIndex)
-		{
-			pAnimationCameraData->Hide();
-		}
+		mesh = meshIt->second;
 	}
+	return mesh;
 }
 
-void Project::CameraMeshUnhide(int cameraIndex, const Movable& transformations)
+void Project::ChangeCameraIndex_ByDelta(int delta)
 {
-	for (auto vd : data_list)
+	int currentSectionIndex = renderer->GetCurrentSectionIndex();
+	WindowSection &section = renderer->GetSection(currentSectionIndex);
+
+	int currentCameraIndex = section.GetCamera();
+	int currentMesh = GetMeshIndex(currentCameraIndex);
+
+	int nextCameraIndex = (int)addCyclic<int>(currentCameraIndex, delta, renderer->CamerasCount());
+	int nextMesh = GetMeshIndex(nextCameraIndex);
+
+	const std::vector<SectionLayer *> &sectionLayers = section.GetLayers();
+	for (size_t i = 0; i < sectionLayers.size(); ++i)
 	{
-		auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(vd);
-		if (pAnimationCameraData && pAnimationCameraData->cameraIndex == cameraIndex)
+		const auto &key = std::pair<int, int>{ currentSectionIndex, i };
+		if (currentMesh >= 0)
 		{
-			pAnimationCameraData->SetPosition(transformations.GetPosition());
-			pAnimationCameraData->SetRotation(transformations.GetRotation());
-			pAnimationCameraData->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
-			pAnimationCameraData->UnHide();
+			data_list[currentMesh]->AddSectionLayers({ key });
 		}
+		if (nextMesh >= 0)
+		{
+			data_list[nextMesh]->RemoveSectionLayers({ key });
+		}
+	}
+	section.SetCamera(nextCameraIndex);
+}
+
+void Project::MoveCamera(std::function<void(Movable &)> transform)
+{
+	WindowSection &section = renderer->GetCurrentSection();
+	int cameraIndex = section.GetCamera();
+	auto meshIt = camerasToMesh.find(cameraIndex);
+	igl::opengl::Camera &camera = renderer->GetCamera(cameraIndex);
+	igl::opengl::ViewerData *shape = meshIt == camerasToMesh.end() ? nullptr : data_list[meshIt->second];
+	if (shape != nullptr)
+	{
+		transform(*shape);
+	}
+	transform(camera);
+}
+
+void Project::Transform(Movable &movable, std::function<void(Movable &)> transform)
+{
+	Viewer::Transform(movable, transform);
+	auto *cameraMesh = dynamic_cast<AnimationCameraData *>(&movable);
+	if (cameraMesh != nullptr)
+	{
+		Movable &camera = renderer->GetCamera(cameraMesh->cameraIndex);
+		Viewer::Transform(camera, transform);
 	}
 }
 

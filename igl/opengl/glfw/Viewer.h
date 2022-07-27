@@ -111,10 +111,6 @@ namespace glfw
       int AddShapeFromData(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const Eigen::MatrixXd &UV_V,
           const Eigen::MatrixXi &UV_F, int type, int parent, unsigned int mode, int shaderIndex, const std::vector<std::pair<int, int>> &sectionLayers, const ViewerDataCreateFunc dataCreator);
       int AddShapeCopy(int shpIndx, int parent, unsigned int mode, const std::vector<std::pair<int, int>> &sectionLayers, const ViewerDataCreateFunc dataCreator);
-
-      virtual void WhenTranslate(float dx, float dy) {}
-      virtual void WhenRotate(float dx, float dy) {}
-      virtual void WhenScroll(float dy) {}
     // Mesh IO
     IGL_INLINE bool load_mesh_from_file(const std::string & mesh_file_name, const ViewerDataCreateFunc dataCreator);
     IGL_INLINE bool load_mesh_from_file(const std::string& mesh_file_name)
@@ -283,11 +279,20 @@ public:
       MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat);
 
       virtual void WhenTranslate(const Eigen::Matrix4d &preMat, float dx, float dy);
-
       virtual void WhenScroll(const Eigen::Matrix4d &preMat, float dy);
-
       virtual void WhenRotate(const Eigen::Matrix4d &preMat, float dx, float dy);
 
+private:
+    Movable &GetMovableTransformee(int shapeIndex);
+    Movable &GetMovableTransformee()
+    {
+        return GetMovableTransformee(selected_data_index);
+    }
+
+protected:
+      virtual void Transform(Movable &movable, std::function<void(Movable &)> transform);
+
+public:
       int AddTexture(const std::string& textureFileName, int dim);
       int AddTexture(int width, int height, unsigned char* data, int mode);
       void BindMaterial(Shader* s, unsigned int materialIndx);

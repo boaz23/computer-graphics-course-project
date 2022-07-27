@@ -93,7 +93,6 @@
 		
 	}
 
-	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta);
 	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
 		if (ImGui::GetIO().WantCaptureKeyboard) {
@@ -116,71 +115,80 @@
 					scn->Activate();
 				break;
 
+			// TODO: transformation in camera plane
 			case GLFW_KEY_UP:
-				rndr->MoveCamera(currentCamera, scn->xRotate, 0.05f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyRotate(Eigen::Vector3d(1, 0, 0), 0.05f);
+				});
 				break;
 			case GLFW_KEY_DOWN:
-				//scn->shapeTransformation(scn->xGlobalRotate,-5.f);
-				//cout<< "down: "<<endl;
-				rndr->MoveCamera(currentCamera, scn->xRotate, -0.05f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyRotate(Eigen::Vector3d(1, 0, 0), -0.05f);
+				});
 				break;
 			case GLFW_KEY_LEFT:
-				rndr->MoveCamera(currentCamera, scn->yRotate, 0.05f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyRotate(Eigen::Vector3d(0, 1, 0), 0.05f);
+				});
 				break;
 			case GLFW_KEY_RIGHT:
-				//scn->shapeTransformation(scn->xGlobalRotate,-5.f);
-				//cout<< "down: "<<endl;
-				rndr->MoveCamera(currentCamera, scn->yRotate, -0.05f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyRotate(Eigen::Vector3d(0, 1, 0), -0.05f);
+				});
 				break;
+
 			case GLFW_KEY_Q:
-				rndr->MoveCamera(currentCamera, scn->yTranslate, 0.25f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyTranslate(Eigen::Vector3d(0, 0.25f, 0), 1);
+				});
 				break;
 			case GLFW_KEY_E:
-				rndr->MoveCamera(currentCamera, scn->yTranslate, -0.25f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyTranslate(Eigen::Vector3d(0, -0.25f, 0), 1);
+				});
 				break;
 			case GLFW_KEY_A:
-				rndr->MoveCamera(currentCamera, scn->xTranslate, -0.25f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyTranslate(Eigen::Vector3d(-0.25f, 0, 0), 1);
+				});
 				break;
-			
 			case GLFW_KEY_D:
-				rndr->MoveCamera(currentCamera, scn->xTranslate, 0.25f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyTranslate(Eigen::Vector3d(0.25f, 0, 0), 1);
+				});
 				break;
-			
 			case GLFW_KEY_S:
-				rndr->MoveCamera(currentCamera, scn->zTranslate, 0.5f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyTranslate(Eigen::Vector3d(0, 0, 0.25f), 1);
+				});
 				break;
 			case GLFW_KEY_W:
-				rndr->MoveCamera(currentCamera, scn->zTranslate, -0.5f);
+				scn->MoveCamera([](Movable &movable)
+				{
+					movable.MyTranslate(Eigen::Vector3d(0, 0, -0.25f), 1);
+				});
 				break;
+
 			case GLFW_KEY_O:
-				ChangeCameraIndex_ByDelta(rndr, scn, -1);
+				scn->ChangeCameraIndex_ByDelta(-1);
 				break;
 			case GLFW_KEY_P:
-				ChangeCameraIndex_ByDelta(rndr, scn, 1);
+				scn->ChangeCameraIndex_ByDelta(1);
 				break;
 			default:
 				break;
 
 			}
 		}
-	}
-
-	//void SetDrawCamera_DefaultViewport(Renderer* rndr, Project* scn, int cameraIndex)
-	//{
-	//	for (auto& section : rndr->GetSections()) {
-	//		section->SetCamera(cameraIndex);
-	//	}
-	//}
-
-	void ChangeCameraIndex_ByDelta(Renderer* rndr, Project* scn, int delta)
-	{
-		WindowSection& section = rndr->GetCurrentSection();
-		int selectedCameraIndex = section.GetCamera();
-		int cameraIndex = (int)addCyclic<int>(selectedCameraIndex, delta, rndr->CamerasCount());
-		scn->CameraMeshUnhide(selectedCameraIndex, rndr->GetCamera(selectedCameraIndex));
-		scn->CameraMeshHide(cameraIndex);
-		section.SetCamera(cameraIndex);
-		//SetDrawCamera_DefaultViewport(rndr, scn, static_cast<int>(cameraIndex));
 	}
 
 

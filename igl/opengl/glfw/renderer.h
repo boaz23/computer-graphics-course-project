@@ -147,6 +147,8 @@ public:
 
     inline const igl::opengl::Camera& GetCamera(int index) const { return *cameras[index]; }
 
+    inline igl::opengl::Camera &GetCamera(int index) { return *cameras[index]; }
+
     inline float GetNear(int cameraIndx) { return cameras[cameraIndx]->GetNear(); }
 
     inline float GetFar(int cameraIndx) { return cameras[cameraIndx]->GetFar(); }
@@ -166,6 +168,8 @@ public:
     inline int GetSectionsSize() { return (int)windowSections.size(); }
 
     inline WindowSection& GetSection(int sectionIndex) { return *windowSections[sectionIndex]; }
+
+    inline int GetCurrentSectionIndex() { return currentSection; }
 
     inline WindowSection& GetCurrentSection() { return *windowSections[currentSection]; }
 
