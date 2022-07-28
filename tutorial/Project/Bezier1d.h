@@ -42,7 +42,7 @@ public:
     void CreateSegment();
 
     p_vector GetPoint(int segment, t_t t);
-    bool GetVelocity(int &segment, t_t &t, p_vector &p);
+    bool GetVelocity(int &segment, t_t &t, p_vector &v);
     void GetEdges(Eigen::Matrix<t_scalar, Eigen::Dynamic, PDim> &P, Eigen::Matrix<int, Eigen::Dynamic, 2> &E);
 };
 
@@ -75,6 +75,28 @@ public:
         pcr_vector T = CalcTVector(t);
         phc_matrix segmentM = GetControlPoints(segment);
         return (T * M * segmentM).head<3>();
+    }
+
+    // TODO: Do with iterator instead
+    bool GetVelocity(int &segment, t_t &t, p_vector &v)
+    {
+        if (t >= 1.0)
+        {
+            ++segment;
+            if (segment >= segments.size())
+            {
+                return false;
+            }
+            t = 0.0;
+        }
+
+        t_t next_t = std::min(t + dt, 1.0);
+        p_vector p_current = GetPoint(segment, t);
+        p_vector p_next = GetPoint(segment, next_t);
+        v = p_next - p_current;
+        t = next_t;
+
+        return true;
     }
 
 private:
