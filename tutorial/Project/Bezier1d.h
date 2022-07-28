@@ -47,7 +47,8 @@ public:
 public:
     Bezier1d() : segments{ DefaultSegment } {}
 
-    phc_matrix GetControlPoints(int segment);
+    phc_matrix &GetControlPoints(int segment);
+    const phc_matrix &GetControlPoints(int segment) const;
     void TranslateControlPoint(int segment, int index, const p_vector &translation, bool shouldPreseveC1 = true);
     void CreateSegment();
 
@@ -63,14 +64,19 @@ public:
     {
     }
 
-    phc_matrix GetControlPoints(int segment)
+    phc_matrix &GetControlPoints(int segment)
+    {
+        return segments[segment];
+    }
+
+    const phc_matrix &GetControlPoints(int segment) const
     {
         return segments[segment];
     }
 
     void TranslateControlPoint(int segment, int index, const p_vector &translation, bool shouldPreseveC1 = true)
     {
-        if (segments.size() > 1)
+        if (segments.size() > 1 && shouldPreseveC1)
         {
             throw std::exception("Operation not supported yet");
         }
@@ -83,7 +89,7 @@ public:
     p_vector GetPoint(int segment, t_t t)
     {
         pcr_vector T = CalcTVector(t);
-        phc_matrix segmentM = GetControlPoints(segment);
+        const phc_matrix &segmentM = GetControlPoints(segment);
         return (T * M * segmentM).head<PDim>();
     }
 
