@@ -48,23 +48,6 @@ public:
 public:
     Bezier1d() : segments{ DefaultSegment } {}
 
-    phc_matrix &GetControlPoints(int segment);
-    const phc_matrix &GetControlPoints(int segment) const;
-    void TranslateControlPoint(int segment, int index, const p_vector &translation, bool shouldPreseveC1 = true);
-    void CreateSegment();
-
-    p_vector GetPoint(int segment, t_t t);
-    bool GetNextPoint(int &segment, t_t &t, p_vector &p);
-    void GetEdges(P_Matrix &P, E_Matrix &E);
-};
-
-class Bezier1d_D_3_2 : public Bezier1d<double, 3, 2>
-{
-public:
-    Bezier1d_D_3_2() : Bezier1d<double, 3, 2>()
-    {
-    }
-
     phc_matrix &GetControlPoints(int segment)
     {
         return segments[segment];
@@ -103,13 +86,6 @@ public:
         }
     }
 
-    p_vector GetPoint(int segment, t_t t)
-    {
-        pcr_vector T = CalcTVector(t);
-        const phc_matrix &segmentM = GetControlPoints(segment);
-        return (T * M * segmentM).head<PDim>();
-    }
-
     void CreateSegment(bool shouldPreseveC1 = true)
     {
         phc_matrix lastSegment = GetControlPoints(segments.size() - 1);
@@ -138,6 +114,13 @@ public:
         }
 
         segments.push_back(newSegmentM);
+    }
+
+    p_vector GetPoint(int segment, t_t t)
+    {
+        pcr_vector T = CalcTVector(t);
+        const phc_matrix &segmentM = GetControlPoints(segment);
+        return (T * M * segmentM).head<PDim>();
     }
 
     // TODO: Do with iterator instead
@@ -203,6 +186,14 @@ private:
         Eigen::Index nPoints = nPointsPerSegment*segmentsCount - (segmentsCount-1);
         P.resize(nPoints, Eigen::NoChange);
         E.resize(nPoints - 1, Eigen::NoChange);
+    }
+};
+
+class Bezier1d_D_3_2 : public Bezier1d<double, 3, 2>
+{
+public:
+    Bezier1d_D_3_2() : Bezier1d<double, 3, 2>()
+    {
     }
 };
 
