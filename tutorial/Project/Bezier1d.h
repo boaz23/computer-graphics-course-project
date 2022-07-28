@@ -11,6 +11,14 @@ using t_t = double;
 template<typename TScalar, t_dim PDim, t_dim PFree> class Bezier1d;
 // using Bezier1d_D_3_2 = Bezier1d<t_t, 3, 2>;
 
+class Bezier
+{
+public:
+    static t_t dt;
+};
+
+t_t Bezier::dt = 1.0 / 32.0;
+
 template<typename TScalar, t_dim PDim, t_dim PFree> class Bezier1d
 {
 public:
@@ -30,7 +38,6 @@ public:
 
 // TOOD: Initialize M and the default segment somehow
 protected:
-    t_t dt;
     std::vector<phc_matrix> segments;
 
 public:
@@ -38,7 +45,7 @@ public:
     static phc_matrix DefaultSegment;
 
 public:
-    Bezier1d(t_t dt = 1.0 / 32.0) : dt{ dt }, segments{ DefaultSegment } {}
+    Bezier1d() : segments{ DefaultSegment } {}
 
     phc_matrix GetControlPoints(int segment);
     void TranslateControlPoint(int segment, int index, const p_vector &translation, bool shouldPreseveC1 = true);
@@ -52,7 +59,7 @@ public:
 class Bezier1d_D_3_2 : public Bezier1d<double, 3, 2>
 {
 public:
-    Bezier1d_D_3_2(t_t dt = 1.0 / 32.0) : Bezier1d<double, 3, 2>(dt)
+    Bezier1d_D_3_2() : Bezier1d<double, 3, 2>()
     {
     }
 
@@ -93,7 +100,7 @@ public:
             t = 0.0;
         }
 
-        t_t next_t = std::min(t + dt, 1.0);
+        t_t next_t = std::min(t + Bezier::dt, 1.0);
         //p_vector p_current = GetPoint(segment, t);
         p_vector p_current = p;
         p_vector p_next = GetPoint(segment, next_t);
@@ -109,7 +116,7 @@ public:
 
         t_t t = 0.0;
         int segment = 0;
-        p_vector p_prev{GetControlPoints(0).row(0).head<PDim>()}, p_current{ p_prev };
+        p_vector p_prev{ GetControlPoints(0).row(0).head<PDim>() }, p_current{ p_prev };
         Eigen::Index i = 0;
 
         P.row(i) << p_prev.transpose();
@@ -138,7 +145,7 @@ private:
 
     void ResizeEdgesMatrices(P_Matrix &P, E_Matrix &E)
     {
-        auto nPointsPerSegment = static_cast<Eigen::Index>(std::ceil(1.0 / dt)) + 1;
+        auto nPointsPerSegment = static_cast<Eigen::Index>(std::ceil(1.0 / Bezier::dt)) + 1;
         size_t segmentsCount = segments.size();
         Eigen::Index nPoints = nPointsPerSegment*segmentsCount - (segmentsCount-1);
         P.resize(nPoints, Eigen::NoChange);
