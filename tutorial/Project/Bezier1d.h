@@ -25,6 +25,9 @@ public:
     using ph_vector = Eigen::Matrix<t_scalar, PhDim, 1>;
     using pcr_vector = Eigen::Matrix<t_scalar, 1, nControlPoints>;
 
+    using P_Matrix = Eigen::Matrix<t_scalar, Eigen::Dynamic, PDim>;
+    using E_Matrix = Eigen::Matrix<int, Eigen::Dynamic, 2>;
+
 // TOOD: Initialize M and the default segment somehow
 protected:
     t_t dt;
@@ -35,21 +38,21 @@ public:
     static phc_matrix DefaultSegment;
 
 public:
-    Bezier1d(t_t dt = 1.0 / 16.0) : dt{ dt }, segments{ DefaultSegment } {}
+    Bezier1d(t_t dt = 1.0 / 32.0) : dt{ dt }, segments{ DefaultSegment } {}
 
     phc_matrix GetControlPoints(int segment);
-    void TranslateControlPoint(int segment, int index, const p_vector &translation);
+    void TranslateControlPoint(int segment, int index, const p_vector &translation, bool shouldPreseveC1 = true);
     void CreateSegment();
 
     p_vector GetPoint(int segment, t_t t);
-    bool GetVelocity(int &segment, t_t &t, p_vector &v);
-    void GetEdges(Eigen::Matrix<t_scalar, Eigen::Dynamic, PDim> &P, Eigen::Matrix<int, Eigen::Dynamic, 2> &E);
+    bool GetNextPoint(int &segment, t_t &t, p_vector &p);
+    void GetEdges(P_Matrix &P, E_Matrix &E);
 };
 
 class Bezier1d_D_3_2 : public Bezier1d<double, 3, 2>
 {
 public:
-    Bezier1d_D_3_2(t_t dt = 1.0 / 16.0) : Bezier1d<double, 3, 2>(dt)
+    Bezier1d_D_3_2(t_t dt = 1.0 / 32.0) : Bezier1d<double, 3, 2>(dt)
     {
     }
 
@@ -58,14 +61,14 @@ public:
         return segments[segment];
     }
 
-    void TranslateControlPoint(int segment, int index, const p_vector &translation)
+    void TranslateControlPoint(int segment, int index, const p_vector &translation, bool shouldPreseveC1 = true)
     {
         if (segments.size() > 1)
         {
             throw std::exception("Operation not supported yet");
         }
 
-        ph_vector t;
+        ph_vector t{};
         t << translation, 0;
         segments[segment].row(index) += t;
     }
@@ -74,11 +77,11 @@ public:
     {
         pcr_vector T = CalcTVector(t);
         phc_matrix segmentM = GetControlPoints(segment);
-        return (T * M * segmentM).head<3>();
+        return (T * M * segmentM).head<PDim>();
     }
 
     // TODO: Do with iterator instead
-    bool GetVelocity(int &segment, t_t &t, p_vector &v)
+    bool GetNextPoint(int &segment, t_t &t, p_vector &p)
     {
         if (t >= 1.0)
         {
@@ -91,12 +94,33 @@ public:
         }
 
         t_t next_t = std::min(t + dt, 1.0);
-        p_vector p_current = GetPoint(segment, t);
+        //p_vector p_current = GetPoint(segment, t);
+        p_vector p_current = p;
         p_vector p_next = GetPoint(segment, next_t);
-        v = p_next - p_current;
+        p += p_next - p_current;
         t = next_t;
 
         return true;
+    }
+
+    void GetEdges(P_Matrix &P, E_Matrix &E)
+    {
+        ResizeEdgesMatrices(P, E);
+
+        t_t t = 0.0;
+        int segment = 0;
+        p_vector p_prev{GetControlPoints(0).row(0).head<PDim>()}, p_current{ p_prev };
+        Eigen::Index i = 0;
+
+        P.row(i) << p_prev.transpose();
+        while (GetNextPoint(segment, t, p_current))
+        {
+            Eigen::Index next_i = i + 1;
+            P.row(next_i) << p_current.transpose();
+            E.row(i) << i, next_i;
+            p_prev = p_current;
+            i = next_i;
+        }
     }
 
 private:
@@ -110,6 +134,15 @@ private:
             e *= t;
         }
         return T;
+    }
+
+    void ResizeEdgesMatrices(P_Matrix &P, E_Matrix &E)
+    {
+        auto nPointsPerSegment = static_cast<Eigen::Index>(std::ceil(1.0 / dt)) + 1;
+        size_t segmentsCount = segments.size();
+        Eigen::Index nPoints = nPointsPerSegment*segmentsCount - (segmentsCount-1);
+        P.resize(nPoints, Eigen::NoChange);
+        E.resize(nPoints - 1, Eigen::NoChange);
     }
 };
 
