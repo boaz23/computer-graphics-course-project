@@ -87,14 +87,12 @@ IGL_INLINE void Renderer::draw_by_info(int sectionIndex, int layerIndex, int inf
         glEnable(GL_STENCIL_TEST);
         if (info.flags & passStencil)
         {
-            glStencilFunc(GL_ALWAYS, 1, 0xFF);
-            glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+            glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
         }
         else
         {
             if (info.flags & stencil2)
             {
-                glStencilFunc(GL_EQUAL, 1, 0xFF);
                 glStencilOp(GL_KEEP, GL_KEEP, GL_ZERO);
             }
             else
@@ -441,10 +439,10 @@ void Renderer::MouseProccessing(int button)
     igl::opengl::Camera& camera = *cameras[section.GetCamera()];
     if(button == GLFW_MOUSE_BUTTON_MIDDLE)
 	    scn->MouseProccessing(button, zrel, zrel, CalcMoveCoeff(section.GetCamera(), section.GetViewportSize().z()), 
-            camera.MakeTransScaled());
+            camera.MakeTransd());
     else
         scn->MouseProccessing(button, xrel, yrel, CalcMoveCoeff(section.GetCamera(), section.GetViewportSize().z()),
-            camera.MakeTransScaled());
+            camera.MakeTransd());
 }
 
 float Renderer::CalcMoveCoeff(int cameraIndx, int width)

@@ -222,6 +222,11 @@ IGL_INLINE bool
              
               normal_read = true;
           }
+      // TODO this will center meshes around (0, 0, 0)
+      Eigen::RowVector3d minVals = V.colwise().minCoeff();
+      Eigen::RowVector3d maxVals = V.colwise().maxCoeff();
+      Eigen::RowVector3d fixVals = (maxVals + minVals).array()/2.0;
+      V.rowwise() -= fixVals;
       data()->set_mesh(V,F);
       if(normal_read)
         data()->set_normals(N);
@@ -506,6 +511,15 @@ IGL_INLINE bool
             {
                 Model = View.inverse() * Model;
             }
+            if (flgs & 32)
+            {
+                if (flgs & 2048) {
+                    glStencilFunc(GL_ALWAYS, (int)shapeIndex + 1, 0xFF);
+                }
+                else if (flgs & 32768) {
+                    glStencilFunc(GL_NOTEQUAL, (int)shapeIndex + 1, 0xFF);
+                }
+            }
             if (!(flgs & 65536))
             {
                 Update(Proj, View, Model, shape.GetShader(), shapeIndex);
@@ -711,7 +725,7 @@ IGL_INLINE bool
             for (int pShape : pShapes)
             {
                 selected_data_index = pShape;
-                WhenTranslate(cameraMat * scnMat, -xrel / movCoeff, yrel / movCoeff);
+                WhenTranslate(scnMat * cameraMat.inverse(), -xrel / movCoeff, yrel / movCoeff);
             }
             // TODO apply to camera
             //if (pShapes.size() == 0) {

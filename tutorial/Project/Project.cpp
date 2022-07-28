@@ -67,12 +67,14 @@ void Project::Init()
 	int scissorBox = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex, renderer->GetScissorsTestLayersIndexes());
 	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers);
 	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers);
+	//int camera = AddShapeFromFile("./data/film_camera 2.obj", -1, TRIANGLES, shaderIndex_basic, sceneLayers);
+
 	data_list[scissorBox]->layer = 0;
 	SetShapeMaterial(sceneCube, materialIndex_cube);
 	//SetShapeMaterial(scissorBox, materialIndex_box0);
 	SetShapeMaterial(cube1, materialIndex_grass);
 	SetShapeMaterial(cube2, materialIndex_box0);
-
+	//SetShapeMaterial(camera, materialIndex_box0);
 
 	selected_data_index = sceneCube;
 	float s = 60;
@@ -83,6 +85,10 @@ void Project::Init()
 	SetShapeStatic(scissorBox);
 	selected_data_index = cube2;
 	ShapeTransformation(xTranslate, 2.f, 1);
+	//selected_data_index = camera;
+	//s = 1.f / 30.f;
+	//ShapeTransformation(scaleAll, s, 0);
+	//ShapeTransformation(yTranslate, 1.f, 0);
 
 }
 
@@ -285,7 +291,9 @@ bool GetClosestIntersectingFace(igl::opengl::ViewerData* mesh, const Eigen::Matr
 	Eigen::Vector3d closestIntersectionPoint = Eigen::Vector3d::Ones();
 	for (int i = 0; i < mesh->F.rows(); i++) {
 		Eigen::Matrix3d vertices;
-		Eigen::Vector3i vIndexes = mesh->F.row(i);
+		// TODO this will truncate every other vertex of the face,
+		// taking only a triangle of the first 3 vertices
+		Eigen::Vector3i vIndexes = mesh->F.row(i).head(3);
 		vertices.row(0) = mesh->V.row(vIndexes(0));
 		vertices.row(1) = mesh->V.row(vIndexes(1));
 		vertices.row(2) = mesh->V.row(vIndexes(2));

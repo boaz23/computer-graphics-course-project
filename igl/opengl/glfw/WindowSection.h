@@ -43,7 +43,7 @@ public:
         if (createScissorsLayer) {
             scissorsTestLayerIndex = AddSectionLayer();
             AddDraw(scissorsTestLayerIndex, buffIndex,
-                depthTest | clearDepth | 
+                depthTest |
                 blend | inAction2 | scissorTest,
                 property_id);
             property_id <<= 1;
@@ -52,7 +52,7 @@ public:
             stencilTestLayerIndex = AddSectionLayer();
             AddDraw(stencilTestLayerIndex, buffIndex,
                 onPicking | stencilTest |
-                scaleAbit | inAction | stencil2,
+                scaleAbit | inAction | stencil2 | depthTest,
                 property_id);
         }
     };
