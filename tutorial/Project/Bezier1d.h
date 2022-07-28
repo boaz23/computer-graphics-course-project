@@ -5,7 +5,7 @@
 #include <vector>
 #include <Eigen/Core>
 
-using t_dim = int;
+using t_dim =  unsigned long long int;
 using t_t = double;
 
 template<typename TScalar, t_dim PDim, t_dim PFree> class Bezier1d;
@@ -26,6 +26,7 @@ public:
     const constexpr static t_dim PhDim = PDim + 1;
     const constexpr static t_dim PFree = PFree;
     const constexpr static t_dim nControlPoints = PFree + 2;
+    const constexpr static t_dim lastControlPointIndex = nControlPoints - 1;
 
     using t_scalar = TScalar;
     using phc_matrix = Eigen::Matrix<t_scalar, nControlPoints, PhDim>;
@@ -84,6 +85,22 @@ public:
         ph_vector t{};
         t << translation, 0;
         segments[segment].row(index) += t;
+        if (index == 0)
+        {
+            int prevSegment = segment - 1;
+            if (prevSegment >= 0)
+            {
+                segments[prevSegment].row(lastControlPointIndex) += t;
+            }
+        }
+        else if (index == lastControlPointIndex)
+        {
+            int nextSegment = segment + 1;
+            if (nextSegment < segments.size())
+            {
+                segments[nextSegment].row(0) += t;
+            }
+        }
     }
 
     p_vector GetPoint(int segment, t_t t)
@@ -91,6 +108,36 @@ public:
         pcr_vector T = CalcTVector(t);
         const phc_matrix &segmentM = GetControlPoints(segment);
         return (T * M * segmentM).head<PDim>();
+    }
+
+    void CreateSegment(bool shouldPreseveC1 = true)
+    {
+        phc_matrix lastSegment = GetControlPoints(segments.size() - 1);
+
+        if (shouldPreseveC1)
+        {
+            throw std::exception("Operation not supported yet");
+
+            //phc_matrix lastSegment = GetControlPoints(segments.size() - 1);
+            //ph_vector toLastControlPoint = lastSegment.row(lastControlPointIndex) - lastSegment.row(nControlPoints - 2);
+            //double d = toLastControlPoint.norm();
+            //ph_vector p1 =
+        }
+
+        phc_matrix newSegmentM{};
+        ph_vector p_control = lastSegment.row(lastControlPointIndex);
+        newSegmentM.row(0) = p_control;
+
+        ph_vector p_prev = DefaultSegment.row(0);
+        for (unsigned int i = 1; i < nControlPoints; ++i)
+        {
+            ph_vector p_current = DefaultSegment.row(i);
+            p_control += p_current - p_prev;
+            newSegmentM.row(i) = p_control;
+            p_prev = p_current;
+        }
+
+        segments.push_back(newSegmentM);
     }
 
     // TODO: Do with iterator instead
@@ -141,7 +188,7 @@ private:
     {
         pcr_vector T{};
         t_t e = 1.0;
-        for (int i = nControlPoints - 1; i >= 0; --i)
+        for (int i = static_cast<int>(lastControlPointIndex); i >= 0; --i)
         {
             T(i) = e;
             e *= t;
