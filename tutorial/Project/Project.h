@@ -2,6 +2,7 @@
 #include <utility>
 #include "igl/opengl/glfw/Viewer.h"
 #include "igl/opengl/Camera.h"
+#include "./ProjectMesh.h"
 
 class Renderer;
 
@@ -33,7 +34,7 @@ public:
 
 	std::array<std::pair<int, std::string>, 4> availableMaterials;
 
-	Project();
+	Project(igl::opengl::CameraData camera);
 //	Project(float angle,float relationWH,float zNear, float zFar);
 	void Init();
 	void Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx);
@@ -43,26 +44,53 @@ public:
 	void AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
 	void ChangeCameraIndex_ByDelta(int delta);
 	void MoveCamera(std::function<void (Movable &)> transform);
-
+	void InitRenderer();
+	void InitBezierSection();
 	IGL_INLINE bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
-
+	float AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex,
+		int left, int right, int up, int bottom,
+		const std::vector<std::pair<int, int>>& stencilLayers) override;
 	int AddShapeFromMenu(const std::string& filePath);
 	
 	float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y) override;
 	~Project(void);
 	IGL_INLINE int GetPickingShaderIndex() override { return pickingShaderIndex; }
+	ProjectMesh* GetProjectMeshByIndex(int index);
+	void ToggleSplitMode();
+	void WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy) override;
+	void RotateCamera(double dx, double dy) override;
 
+	void ToggleEditBezierMode();
+	inline bool IsSplitMode() { return splitMode; };
+	inline bool IsEditBezierMode() { return editBezierMode; }
+	void InitResources();
+	igl::opengl::glfw::ViewerDataCreateFunc GetDataCreator(int layer, bool isPickable, bool outline);
+	ProjectMesh* CreateProjectMesh();
 protected:
 	bool ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex) const override;
 	void Transform(Movable &movable, std::function<void(Movable &)> transform) override;
-
+	void InitScene();
 private:
+	int shaderIndex_cubemap;
 	int shaderIndex_basic;
+	int materialIndex_grass;
+	int materialIndex_box0;
 	int pickingShaderIndex;
-
+	int fullScreenSection;
+	int leftSection;
+	int rightSection;
+	int editBezierSection;
+	int designCameraIndex;
+	int editCameraIndex;
+	igl::opengl::CameraData cameraData;
+	int controlPointsMeshIndexes[4];
+	bool splitMode;
+	bool editBezierMode;
 	std::unordered_map<int, int> camerasToMesh;
 
 	int GetMeshIndex(int cameraIndex);
+
+
 };
 
 

@@ -17,22 +17,71 @@ static void printMat(const Eigen::Matrix4d& mat)
 	}
 }
 
-Project::Project() : 
+Project::Project(igl::opengl::CameraData camera) :	
+	controlPointsMeshIndexes{-1, -1, -1, -1},
+	editBezierMode{false},
+	splitMode{false},
+	materialIndex_box0{-1},
+	materialIndex_grass{-1},
+	shaderIndex_cubemap{-1},
 	isInDesignMode{true}, 
 	isDesignModeView{true}, 
 	shaderIndex_basic{-1},
 	pickingShaderIndex(-1),
-	camerasToMesh{}
+	camerasToMesh{},
+	cameraData{camera},
+	fullScreenSection{-1},
+	leftSection{-1},
+	rightSection{-1},
+	editBezierSection{-1},
+	designCameraIndex{-1},
+	editCameraIndex{-1}	
 {
+	data_list.front() = new ProjectMesh(0, false, false);
+	data_list.front()->id = 0;
+	// Per face
+	data()->set_face_based(false);
 }
 
-void Project::Init()
-{		
-	Viewer::AddLayer();
-	Viewer::AddLayer();
+
+void Project::InitRenderer() {
+	fullScreenSection = renderer->AddSection(
+		0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+		0, true, true, true);
+	leftSection = renderer->AddSection(
+		0, 0, DISPLAY_WIDTH/2, DISPLAY_HEIGHT,
+		0, true, true, true);
+	rightSection = renderer->AddSection(
+		DISPLAY_WIDTH/2, 0, DISPLAY_WIDTH/2, DISPLAY_HEIGHT,
+		0, true, true, false);
+	editBezierSection = renderer->AddSection(
+		DISPLAY_WIDTH / 2, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT,
+		0, false, false, false, false, false);
+	designCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), cameraData);
+	// bezier edit camera
+	igl::opengl::CameraData editBezierCameraData(45, DISPLAY_RATIO, NEAR, FAR);
+	editCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), editBezierCameraData);
+	// Default full screen
+	renderer->ActivateSection(fullScreenSection);
+	renderer->GetSection(editBezierSection).SetCamera(editCameraIndex);
+}
+
+void Project::InitBezierSection() {
+	std::pair<int, int> bezierSectionSceneLayerKey = { editBezierSection, renderer->GetSection(editBezierSection).GetSceneLayerIndex() };
+	int bezierPlane = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex,
+		{ bezierSectionSceneLayerKey }, GetDataCreator(0, false, false));
+	SetShapeStatic(bezierPlane);
+	for (int i = 0; i < 4; i++) {
+		controlPointsMeshIndexes[i] = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, { bezierSectionSceneLayerKey },
+			GetDataCreator(0, true, false));
+		ShapeTransformation(xTranslate, -1.5f + (float)i, 1);
+		ShapeTransformation(scaleAll, 0.2f, 1);
+	}
+}
+
+void Project::InitResources() {
 	pickingShaderIndex = AddShader("shaders/pickingShader");
-	int shaderIndex_cubemap = AddShader("shaders/cubemapShader");
-	int shaderIndex_basicTex = AddShader("shaders/basicShaderTex");
+	shaderIndex_cubemap = AddShader("shaders/cubemapShader");
 	shaderIndex_basic = AddShader("shaders/basicShader");
 
 	unsigned int textureIndex_plane = AddTexture("textures/plane.png", 2);
@@ -50,9 +99,9 @@ void Project::Init()
 	};
 	unsigned int slots[] = { 0, 1, 2, 3, 4 };
 
-	int materialIndex_box0 = AddMaterial(texIDs + 0, slots + 0, 1);
+	materialIndex_box0 = AddMaterial(texIDs + 0, slots + 0, 1);
 	materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
-	int materialIndex_grass = AddMaterial(texIDs + 2, slots + 2, 1);
+	materialIndex_grass = AddMaterial(texIDs + 2, slots + 2, 1);
 	int materialIndex_plane = AddMaterial(texIDs + 3, slots + 3, 1);
 	int materialIndex_bricks = AddMaterial(texIDs + 4, slots + 4, 1);
 	availableMaterials =
@@ -62,14 +111,21 @@ void Project::Init()
 		std::pair<int, std::string>{materialIndex_plane, "Plane"},
 		std::pair<int, std::string>{materialIndex_bricks, "Bricks"}
 	};
+
+}
+
+void Project::InitScene() {
 	std::vector<std::pair<int, int>>& sceneLayers = renderer->GetSceneLayersIndexes();
-	int sceneCube = AddShape(Cube, -2, TRIANGLES, shaderIndex_cubemap, sceneLayers);
-	int scissorBox = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex, renderer->GetScissorsTestLayersIndexes());
-	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers);
-	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers);
+	int sceneCube = AddShape(Cube, -2, TRIANGLES, shaderIndex_cubemap, sceneLayers, 
+		GetDataCreator(0, false, false));
+	int scissorBox = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex, renderer->GetScissorsTestLayersIndexes(), 
+		GetDataCreator(0, false, false));
+	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers, 
+		GetDataCreator(currentEditingLayer, true, true));
+	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers, 
+		GetDataCreator(currentEditingLayer, true, true));
 	//int camera = AddShapeFromFile("./data/film_camera 2.obj", -1, TRIANGLES, shaderIndex_basic, sceneLayers);
 
-	data_list[scissorBox]->layer = 0;
 	SetShapeMaterial(sceneCube, materialIndex_cube);
 	//SetShapeMaterial(scissorBox, materialIndex_box0);
 	SetShapeMaterial(cube1, materialIndex_grass);
@@ -89,7 +145,17 @@ void Project::Init()
 	//s = 1.f / 30.f;
 	//ShapeTransformation(scaleAll, s, 0);
 	//ShapeTransformation(yTranslate, 1.f, 0);
-
+}
+void Project::Init()
+{		
+	Viewer::AddLayer();
+	Viewer::AddLayer();
+	InitResources();
+	InitRenderer();
+	InitScene();
+	InitBezierSection();
+	// default animation camera
+	AddCamera(Eigen::Vector3d(0.0, 0.0, 0.0), cameraData, CameraKind::Animation);
 }
 
 void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx)
@@ -146,7 +212,8 @@ int Project::AddShapeFromMenu(const std::string& filePath)
 		return -1;
 	}
 
-	return AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, renderer->GetSceneLayersIndexes());
+	return AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, renderer->GetSceneLayersIndexes(),
+		GetDataCreator(currentEditingLayer, true, true));
 }
 
 void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
@@ -191,26 +258,30 @@ int Project::GetMeshIndex(int cameraIndex)
 void Project::ChangeCameraIndex_ByDelta(int delta)
 {
 	int currentSectionIndex = renderer->GetCurrentSectionIndex();
+	if (currentSectionIndex == editBezierSection) {
+		return;
+	}
 	WindowSection &section = renderer->GetSection(currentSectionIndex);
-
 	int currentCameraIndex = section.GetCamera();
 	int currentMesh = GetMeshIndex(currentCameraIndex);
-
-	int nextCameraIndex = (int)addCyclic<int>(currentCameraIndex, delta, renderer->CamerasCount());
+	int tempCameraIndex = (currentCameraIndex+delta)%(renderer->CamerasCount() + 1);
+	int nextCameraIndex = -1;
+	while (nextCameraIndex == -1) {
+		if (tempCameraIndex == 0 || camerasToMesh.find(tempCameraIndex) != camerasToMesh.end()) {
+			nextCameraIndex = tempCameraIndex;
+		}
+		tempCameraIndex = (tempCameraIndex + 1) % renderer->CamerasCount();
+	}
 	int nextMesh = GetMeshIndex(nextCameraIndex);
-
-	const std::vector<SectionLayer *> &sectionLayers = section.GetLayers();
-	for (size_t i = 0; i < sectionLayers.size(); ++i)
+	const auto &sceneKey = std::pair<int, int>{ currentSectionIndex, section.GetSceneLayerIndex() };
+	const auto& stencilKey = std::pair<int, int>{ currentSectionIndex, section.GetStencilTestLayerIndex() };
+	if (currentMesh >= 0)
 	{
-		const auto &key = std::pair<int, int>{ currentSectionIndex, i };
-		if (currentMesh >= 0)
-		{
-			data_list[currentMesh]->AddSectionLayers({ key });
-		}
-		if (nextMesh >= 0)
-		{
-			data_list[nextMesh]->RemoveSectionLayers({ key });
-		}
+		data_list[currentMesh]->AddSectionLayers({ sceneKey });
+	}
+	if (nextMesh >= 0)
+	{
+		data_list[nextMesh]->RemoveSectionLayers({ sceneKey, stencilKey });
 	}
 	section.SetCamera(nextCameraIndex);
 }
@@ -285,20 +356,20 @@ bool TriangleIntersection(const Eigen::Vector3d& source, const Eigen::Vector3d& 
 	return false;
 }
 
-bool GetClosestIntersectingFace(igl::opengl::ViewerData* mesh, const Eigen::Matrix4d& meshView, const Eigen::Vector3d& sourcePointScene, const Eigen::Vector3d& dirToScene, Eigen::Vector3d& closestIntersectionToRet, int& closestFaceIndexToRet) {
+bool GetClosestIntersectingFace(igl::opengl::ViewerData& mesh, const Eigen::Matrix4d& meshView, const Eigen::Vector3d& sourcePointScene, const Eigen::Vector3d& dirToScene, Eigen::Vector3d& closestIntersectionToRet, int& closestFaceIndexToRet) {
 	int closestShapeFaceIndex = -1;
 	double closestShapeFaceDist = -1;
 	Eigen::Vector3d closestIntersectionPoint = Eigen::Vector3d::Ones();
-	for (int i = 0; i < mesh->F.rows(); i++) {
+	for (int i = 0; i < mesh.F.rows(); i++) {
 		Eigen::Matrix3d vertices;
 		// TODO this will truncate every other vertex of the face,
 		// taking only a triangle of the first 3 vertices
-		Eigen::Vector3i vIndexes = mesh->F.row(i).head(3);
-		vertices.row(0) = mesh->V.row(vIndexes(0));
-		vertices.row(1) = mesh->V.row(vIndexes(1));
-		vertices.row(2) = mesh->V.row(vIndexes(2));
+		Eigen::Vector3i vIndexes = mesh.F.row(i).head(3);
+		vertices.row(0) = mesh.V.row(vIndexes(0));
+		vertices.row(1) = mesh.V.row(vIndexes(1));
+		vertices.row(2) = mesh.V.row(vIndexes(2));
 		Eigen::Vector3d intersectionPoint;
-		bool intersect = TriangleIntersection(sourcePointScene, dirToScene, vertices, mesh->F_normals.row(i), intersectionPoint);
+		bool intersect = TriangleIntersection(sourcePointScene, dirToScene, vertices, mesh.F_normals.row(i), intersectionPoint);
 		if (intersect) {
 			double dist = (intersectionPoint - sourcePointScene).norm();
 			if (closestShapeFaceIndex == -1 || dist < closestShapeFaceDist) {
@@ -320,12 +391,12 @@ float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewpor
 	int closestShapeIndex = -1;
 	int closestFaceIndex = -1;
 	double closestFaceDist = -1;
-	for (int i = 1; i < data_list.size(); i++) {
-		igl::opengl::ViewerData* mesh = data_list[i];
-		if (!ShouldRenderViewerData(*mesh, sectionIndex, layerIndex)) {
+	for (int i = 0; i < data_list.size(); i++) {
+		ProjectMesh& mesh = *GetProjectMeshByIndex(i);
+		if (!ShouldRenderViewerData(mesh, sectionIndex, layerIndex) || !mesh.IsPickable()) {
 			continue;
 		}
-		Eigen::Matrix4d meshView = sceneView * mesh->MakeTransScaled();
+		Eigen::Matrix4d meshView = sceneView * mesh.MakeTransScaled();
 		Eigen::Vector3d sourcePointScene, dirToScene;
 		ProjectScreenCoordToScene(x, y, viewportf, meshView.inverse(), sourcePointScene, dirToScene);
 		Eigen::Vector3d closestIntersectionPoint;
@@ -342,7 +413,109 @@ float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewpor
 	if (closestShapeIndex != -1) {
 		selected_data_index = closestShapeIndex;
 		pShapes.push_back(selected_data_index);
-		data_list[selected_data_index]->AddSectionLayers(stencilLayers);
+		if (GetProjectMeshByIndex(selected_data_index)->DrawOutline()) {
+			data_list[selected_data_index]->AddSectionLayers(stencilLayers);
+		}
 	}
 	return (float)closestFaceDist;
 }
+
+void Project::ToggleSplitMode() {
+	if (splitMode) {
+		renderer->DeactivateSection(leftSection);
+		renderer->DeactivateSection(editBezierMode ? editBezierSection : rightSection);
+		renderer->ActivateSection(fullScreenSection);
+	}
+	else {
+		renderer->DeactivateSection(fullScreenSection);
+		renderer->ActivateSection(leftSection);
+		renderer->ActivateSection(editBezierMode ? editBezierSection : rightSection);
+	}
+	splitMode = !splitMode;
+}
+
+void Project::ToggleEditBezierMode() {
+	if (splitMode) {
+		renderer->DeactivateSection(editBezierMode ? editBezierSection : rightSection);
+		renderer->ActivateSection(editBezierMode ? rightSection : editBezierSection);
+	}
+	editBezierMode = !editBezierMode;
+}
+
+ProjectMesh* Project::GetProjectMeshByIndex(int index) {
+	auto projectMeshToRet = dynamic_cast<ProjectMesh*>(const_cast<igl::opengl::ViewerData*>(data_list[index]));
+	return projectMeshToRet;
+}
+
+float Project::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right, int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers)
+{
+	if (renderer->GetCurrentSectionIndex() == editBezierSection) {
+		// Multi picking not allowed in bezier edit
+		return -1.0;
+	}
+	//not correct when the shape is scaled
+	Eigen::Matrix4d MVP = PV * MakeTransd();
+	std::cout << "picked shapes  ";
+	bool isFound = false;
+	for (int i = 0; i < data_list.size(); i++)
+	{ //add to pShapes if the center in range
+		ProjectMesh& mesh = *GetProjectMeshByIndex(i);
+		Eigen::Matrix4d Model = mesh.MakeTransd();
+		Model = CalcParentsTrans(i) * Model;
+		Eigen::Vector4d pos = MVP * Model * Eigen::Vector4d(0, 0, 0, 1);
+		double xpix = (1 + pos.x() / pos.z()) * viewport.z() / 2;
+		double ypix = (1 + pos.y() / pos.z()) * viewport.w() / 2;
+		if (ShouldRenderViewerData(mesh, sectionIndex, layerIndex) && mesh.IsPickable() && xpix < right && xpix > left && ypix < bottom && ypix > up)
+		{
+			pShapes.push_back(i);			
+			if (mesh.DrawOutline()) {
+				data_list[i]->AddSectionLayers(stencilLayers);
+			}
+			std::cout << i << ", ";
+			selected_data_index = i;
+			isFound = true;
+		}
+	}
+	std::cout << std::endl;
+	if (isFound)
+	{
+		Eigen::Vector4d tmp = MVP * GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index) * data()->MakeTransd() * Eigen::Vector4d(0, 0, 1, 1);
+		return (float)tmp.z();
+	}
+	else
+		return -1;
+}
+
+
+void Project::WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy)
+{
+	Eigen::Vector4d xRotation = preMat.transpose() * Eigen::Vector4d(0, 1, 0, 0);
+	Eigen::Vector4d yRotation = preMat.transpose() * Eigen::Vector4d(1, 0, 0, 0);
+	if (renderer->GetCurrentSection().IsRotationAllowed()) {
+		Transform(GetMovableTransformee(), [&xRotation, &dx, &yRotation, &dy](Movable& movable)
+		{
+			movable.RotateInSystem(xRotation.head(3), dx);
+			movable.RotateInSystem(yRotation.head(3), dy);
+		});
+
+	}
+}
+
+
+igl::opengl::glfw::ViewerDataCreateFunc Project::GetDataCreator(int layer, bool isPicking, bool outline) {
+	return [this, layer, isPicking, outline]()
+	{
+		return new ProjectMesh(layer, isPicking, outline);
+	};
+}
+void Project::RotateCamera(double dx, double dy) {
+	if (renderer->GetCurrentSection().IsRotationAllowed()) {
+		MoveCamera([&dx, &dy](Movable& movable)
+		{
+			movable.RotateInSystem(Eigen::Vector3d(0, 1, 0), dx);
+			movable.RotateInSystem(Eigen::Vector3d(1, 0, 0), dy);
+		});
+	}
+}
+
+

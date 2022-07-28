@@ -250,10 +250,8 @@ public:
 
       Eigen::Matrix4d GetPriviousTrans(const Eigen::Matrix4d &View, unsigned int index);
 
-      float
-      AddPickedShapes(const Eigen::Matrix4d &PV, const Eigen::Vector4i &viewport, int sectionIndex, int layerIndex, int left, int right,
-                      int up, int bottom, const std::vector<std::pair<int, int>> &stencilLayers);
-
+      virtual float AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right,
+          int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers) = 0;
       template<typename T> bool AllPickedShapesSameValue(std::function<T(const ViewerData&)> valueFunc) const
       {
           if (pShapes.size() <= 1)
@@ -282,7 +280,6 @@ public:
       virtual void WhenScroll(const Eigen::Matrix4d &preMat, float dy);
       virtual void WhenRotate(const Eigen::Matrix4d &preMat, float dx, float dy);
 
-private:
     Movable &GetMovableTransformee(int shapeIndex);
     Movable &GetMovableTransformee()
     {
@@ -320,6 +317,10 @@ public:
       virtual int GetPickingShaderIndex() {
           return -1;
       };
+
+      virtual void MoveCamera(std::function<void(Movable&)> transform) {};
+
+      virtual void RotateCamera(double dx, double dy) {};
 
   protected:
       virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const;

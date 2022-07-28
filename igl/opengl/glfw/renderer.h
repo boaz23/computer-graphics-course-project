@@ -118,9 +118,14 @@ public:
 
     int AddCamera(const Eigen::Vector3d &pos, igl::opengl::CameraData cameraData);
 
-    void AddSection(int left, int bottom, int width, int height, int buffIndex,
-        bool createStencilLayer, bool createScissorsLayer);
+    int AddSection(int left, int bottom, int width, int height, int buffIndex,
+        bool createStencilLayer, bool createScissorsLayer, bool clearBuffer, 
+        bool autoAddToSection=true,
+        bool allowRotation=true);
 
+    inline void ActivateSection(int sectionIndex) { windowSections[sectionIndex]->Activate(); }
+    inline void DeactivateSection(int sectionIndex) { windowSections[sectionIndex]->Deactivate(); }
+    inline bool IsSectionActive(int sectionIndex) { return windowSections[sectionIndex]->isActive(); }
     //unsigned int AddBuffer(int infoIndx);
 
     //int Create2Dmaterial(int infoIndx, int code);
@@ -189,7 +194,7 @@ public:
     }
     inline bool IsPicked() { return isPicked; }
     inline bool IsMany() const { return isMany; }
-    void Init(igl::opengl::glfw::Viewer *scene, std::list<int> xViewport, std::list<int> yViewport, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
+    void Init(igl::opengl::glfw::Viewer *scene, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
     // Added: functions for selection mode and to try single pick
     bool isInSelectMode() {
         return isSelecting;
@@ -202,10 +207,12 @@ public:
     }
     bool TrySinglePicking(int x, int y);
 
-    std::vector<std::pair<int, int>> GetSceneLayersIndexes() {
+    std::vector<std::pair<int, int>> GetSceneLayersIndexes(bool onlyAutoAdd=true) {
         std::vector<std::pair<int, int>> layers;
         for (int i = 0; i < GetSectionsSize(); i++) {
-            layers.push_back(std::pair<int, int>(i, windowSections[i]->GetSceneLayerIndex()));
+            if ((!onlyAutoAdd || windowSections[i]->IsAutoAddSection()) && windowSections[i]->GetSceneLayerIndex() != -1) {
+                layers.push_back(std::pair<int, int>(i, windowSections[i]->GetSceneLayerIndex()));
+            }
         }
         return layers;
     }
@@ -213,7 +220,8 @@ public:
     std::vector<std::pair<int, int>> GetScissorsTestLayersIndexes() {
         std::vector<std::pair<int, int>> layers;
         for (int i = 0; i < GetSectionsSize(); i++) {
-            layers.push_back(std::pair<int, int>(i, windowSections[i]->GetScissorTestLayerIndex()));
+            if(windowSections[i]->GetScissorTestLayerIndex() != -1)
+                layers.push_back(std::pair<int, int>(i, windowSections[i]->GetScissorTestLayerIndex()));
         }
         return layers;
     }
@@ -221,7 +229,8 @@ public:
     std::vector<std::pair<int, int>> GetStencilTestLayersIndexes() {
         std::vector<std::pair<int, int>> layers;
         for (int i = 0; i < GetSectionsSize(); i++) {
-            layers.push_back(std::pair<int, int>(i, windowSections[i]->GetStencilTestLayerIndex()));
+            if (windowSections[i]->GetScissorTestLayerIndex() != -1)
+                layers.push_back(std::pair<int, int>(i, windowSections[i]->GetStencilTestLayerIndex()));
         }
         return layers;
     }

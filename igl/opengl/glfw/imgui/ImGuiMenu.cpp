@@ -206,6 +206,19 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
     ImVec2 fullWidthVec2(-1, 0);
 
   Project* project = dynamic_cast<Project*>(&viewer);
+  if (project && ImGui::CollapsingHeader("Viewports", ImGuiTreeNodeFlags_DefaultOpen))
+  {
+      bool splitMode = project->IsSplitMode();
+      bool editBezierMode = project->IsEditBezierMode();
+      if (project->isInDesignMode && ImGui::Checkbox("Split", &splitMode))
+      {
+          project->ToggleSplitMode();
+      }
+      if (project->isInDesignMode && project->renderer->IsPicked() && ImGui::Checkbox("Edit Bezier", &splitMode))
+      {
+          project->ToggleEditBezierMode();
+      }
+  }
   if (project && ImGui::CollapsingHeader("Cameras", ImGuiTreeNodeFlags_DefaultOpen))
   {
     if (ImGui::Button("Add camera", fullWidthVec2))

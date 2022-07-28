@@ -1,13 +1,12 @@
 #pragma once
 #ifndef PROJECT_ANIMATION_CAMERA_H
 #define PROJECT_ANIMATION_CAMERA_H
+#include "./ProjectMesh.h"
 
-#include "igl/opengl/ViewerData.h"
-
-class AnimationCameraData : public igl::opengl::ViewerData {
+class AnimationCameraData : public ProjectMesh {
 public:
 	AnimationCameraData(int layer, int cameraIndex)
-		: igl::opengl::ViewerData(layer), cameraIndex{cameraIndex} {}
+		: ProjectMesh(layer, true, true), cameraIndex{cameraIndex} {}
 
 	int cameraIndex;
 };

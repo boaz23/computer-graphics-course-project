@@ -35,7 +35,7 @@ Renderer::Renderer(igl::opengl::CameraData cameraData)
     callback_key_down_data = nullptr;
     callback_key_up_data = nullptr;
     glLineWidth(5);
-    cameras.push_back(new igl::opengl::Camera(cameraData));
+    //cameras.push_back(new igl::opengl::Camera(cameraData));
     isPressed = false;
     isMany = false;
     xold = 0;
@@ -158,12 +158,15 @@ IGL_INLINE void Renderer::draw( GLFWwindow* window)
     int sectionIndex = 0;
     for (auto& section : windowSections)
     {
+        if (!section->isActive()) {
+            sectionIndex++;
+            continue;
+        }
         int layerIndex = 0;
         for (auto& layer : section->GetLayers()) {
             int infoIndex = 0;
             for (auto& info : layer->getInfos()) {
                 // Added: changed multipicking to work when inAction2 && !stencilTest && isSelecting and single picking to work when inAction && stencilTest && isPicked
-                // TODO what happend when picking in one section? will it render the scissor box twice?
                 if (
                     // regular info
                     !(info->flags & (inAction | inAction2)) || 
@@ -213,9 +216,9 @@ float Renderer::UpdatePosition(float xpos, float ypos)
 
 void Renderer::UpdatePress(float xpos, float ypos)
 {
-    if (currentSection < 0 || !CheckSection(xpos, ypos, currentSection)) {
+    if (currentSection < 0 || !windowSections[currentSection]->isActive() || !CheckSection(xpos, ypos, currentSection)) {
         for (int i = 0; i < GetSectionsSize(); i++) {
-            if (CheckSection(xpos, ypos, i)) {
+            if (windowSections[i]->isActive() && CheckSection(xpos, ypos, i)) {
                 UpdateSection(i);
                 break;
             }
@@ -233,14 +236,17 @@ int Renderer::AddCamera(const Eigen::Vector3d& pos, igl::opengl::CameraData came
     return cameraIndex;
 }
 
-void Renderer::AddSection(int left, int bottom, int width, int height, int buffIndex,
-    bool createStencilLayer, bool createScissorsLayer)
+int Renderer::AddSection(int left, int bottom, int width, int height, int buffIndex,
+    bool createStencilLayer, bool createScissorsLayer, bool clearBuffer, bool autoAddToSection,
+    bool allowRotation)
 {
     windowSections.emplace_back(new WindowSection(left, bottom, width, height, 
-        buffIndex, next_property_id, GetSectionsSize(), createStencilLayer, createScissorsLayer));
+        buffIndex, next_property_id, GetSectionsSize(), 
+        createStencilLayer, createScissorsLayer, clearBuffer, autoAddToSection, allowRotation));
     next_property_id <<= windowSections.back()->GetLayers().size();
     windowSections.back()->SetCamera(0);
     glViewport(left, bottom, width, height);
+    return (int)windowSections.size() - 1;
 }
 
 void Renderer::AddDraw(int sectionIndex, int layerIndex, int buffIndx, unsigned int flags)
@@ -493,30 +499,16 @@ float Renderer::CalcMoveCoeff(int cameraIndx, int width)
 //    SwapDrawInfo(2, 3);
 //}
 
-IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, std::list<int>xViewport, std::list<int>yViewport, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu)
+IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu)
 {
     scn = scene;
     menu = _menu;
-    MoveCamera(0, zTranslate, 10);
+    //MoveCamera(0, zTranslate, 10);
     Eigen::Vector4i viewport;
     glGetIntegerv(GL_VIEWPORT, viewport.data());
     buffers.push_back(new igl::opengl::DrawBuffer());
     maxPixX = viewport.z();
     maxPixY = viewport.w();
-    xViewport.push_front(0);
-    yViewport.push_front(0);
-    std::list<int>::iterator xit = xViewport.begin();
-    int indx = 0;
-    
-    for (++xit; xit != xViewport.end(); ++xit)
-    {
-        std::list<int>::iterator yit = yViewport.begin();
-        for (++yit; yit != yViewport.end(); ++yit)
-        {
-            AddSection(*std::prev(xit), *std::prev(yit), *xit - *std::prev(xit), *yit - *std::prev(yit),
-                0, true, true);
-        }
-    }
     if (menu)
     {
         menu->callback_draw_viewer_menu = [&]()

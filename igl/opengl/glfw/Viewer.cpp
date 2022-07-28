@@ -74,8 +74,6 @@ namespace glfw
       currentObjectLayer{1},
       isEditingObjectLayer{false}
   {
-    data_list.front() = new ViewerData();
-    data_list.front()->id = 0;
     staticScene = 0;
     overlay_point_shader = nullptr;
     overlay_shader = nullptr;
@@ -88,8 +86,6 @@ namespace glfw
     SetShader_overlay("shaders/overlay");
     SetShader_point_overlay("shaders/overlay_points");
 
-    // Per face
-    data()->set_face_based(false);
 
     
 //#ifndef IGL_VIEWER_VIEWER_QUIET
@@ -727,10 +723,12 @@ IGL_INLINE bool
                 selected_data_index = pShape;
                 WhenTranslate(scnMat * cameraMat.inverse(), -xrel / movCoeff, yrel / movCoeff);
             }
-            // TODO apply to camera
-            //if (pShapes.size() == 0) {
-            //    WhenTranslate(cameraMat * scnMat, -xrel / movCoeff, yrel / movCoeff);
-            //}
+            if (pShapes.size() == 0) {
+                MoveCamera([&xrel, &yrel](Movable& movable)
+                {
+                    movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(-xrel * 0.001, yrel*0.001, 0));
+                });
+            }
         }
         else
         {
@@ -743,10 +741,11 @@ IGL_INLINE bool
                     selected_data_index = pShape;
                     WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
                 }
-                // TODO apply to camera
-                //if (pShapes.size() == 0) {
-                //    WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
-                //}
+                if (pShapes.size() == 0) {
+                    float dx = -((float)xrel / 180) / movCoeff;
+                    float dy = ((float)yrel / 180) / movCoeff;
+                    RotateCamera(dx, dy);
+                }
             }
             else
             {
@@ -756,7 +755,12 @@ IGL_INLINE bool
                     selected_data_index = pShape;
                     WhenScroll(cameraMat * scnMat, yrel / movCoeff);
                 }
-                // TODO apply to camera
+                if (pShapes.size() == 0) {
+                    MoveCamera([&xrel, &yrel, &movCoeff](Movable& movable)
+                    {
+                        movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(0.0, 0.0, yrel / movCoeff));
+                    });
+                }
             }
         }
     }
@@ -873,38 +877,6 @@ IGL_INLINE bool
             return  View.inverse() * Model;
         else
             return Model;
-    }
-
-    float Viewer::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right, int up, int bottom, const std::vector<std::pair<int, int>> &stencilLayers)
-    {
-        //not correct when the shape is scaled
-        Eigen::Matrix4d MVP = PV * MakeTransd();
-        std::cout << "picked shapes  ";
-        bool isFound = false;
-        for (int i = 1; i < data_list.size(); i++)
-        { //add to pShapes if the center in range
-            Eigen::Matrix4d Model = data_list[i]->MakeTransd();
-            Model = CalcParentsTrans(i) * Model;
-            Eigen::Vector4d pos = MVP * Model * Eigen::Vector4d(0,0,0,1);
-            float xpix = (1 + pos.x() / pos.z()) * viewport.z() / 2;
-            float ypix = (1 + pos.y() / pos.z()) * viewport.w() / 2;
-            if (ShouldRenderViewerData(*data_list[i], sectionIndex, layerIndex) && xpix < right && xpix > left && ypix < bottom && ypix > up)
-            {
-                pShapes.push_back(i);
-                data_list[i]->AddSectionLayers(stencilLayers);
-                std::cout << i << ", ";
-                selected_data_index = i;
-                isFound = true;
-            }
-        }
-        std::cout << std::endl;
-        if (isFound)
-        {
-            Eigen::Vector4d tmp = MVP  * GetPriviousTrans(Eigen::Matrix4d::Identity(),selected_data_index ) * data()->MakeTransd() * Eigen::Vector4d(0, 0, 1, 1);
-            return (float)tmp.z();
-        }
-        else
-            return -1;
     }
 
     bool Viewer::ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const

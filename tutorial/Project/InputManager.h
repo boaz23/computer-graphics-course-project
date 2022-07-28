@@ -53,12 +53,9 @@
 	{
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
-		if (rndr->IsPicked())
-		{
-			rndr->UpdateZpos((int)yoffset);
-			// TODO zoom on object 
-			rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE);
-		}
+		rndr->UpdateZpos((int)yoffset);
+		// TODO zoom on object 
+		rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE);
 	}
 	
 	void glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
@@ -101,6 +98,7 @@
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
 		int currentCamera = rndr->GetCurrentSection().GetCamera();
+		bool allowRotation = rndr->GetCurrentSection().IsRotationAllowed();
 		if (action == GLFW_PRESS || action == GLFW_REPEAT)
 		{
 			switch (key)
@@ -117,28 +115,36 @@
 
 			// TODO: transformation in camera plane
 			case GLFW_KEY_UP:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyRotate(Eigen::Vector3d(1, 0, 0), 0.05f);
-				});
+				if (allowRotation) {
+					scn->MoveCamera([](Movable& movable)
+					{
+						movable.MyRotate(Eigen::Vector3d(1, 0, 0), 0.05f);
+					});
+				}
 				break;
 			case GLFW_KEY_DOWN:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyRotate(Eigen::Vector3d(1, 0, 0), -0.05f);
-				});
+				if (allowRotation) {
+					scn->MoveCamera([](Movable& movable)
+					{
+						movable.MyRotate(Eigen::Vector3d(1, 0, 0), -0.05f);
+					});
+				}
 				break;
 			case GLFW_KEY_LEFT:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyRotate(Eigen::Vector3d(0, 1, 0), 0.05f);
-				});
+				if (allowRotation) {
+					scn->MoveCamera([](Movable& movable)
+					{
+						movable.MyRotate(Eigen::Vector3d(0, 1, 0), 0.05f);
+					});
+				}
 				break;
 			case GLFW_KEY_RIGHT:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyRotate(Eigen::Vector3d(0, 1, 0), -0.05f);
-				});
+				if (allowRotation) {
+					scn->MoveCamera([](Movable& movable)
+					{
+						movable.MyRotate(Eigen::Vector3d(0, 1, 0), -0.05f);
+					});
+				}
 				break;
 
 			case GLFW_KEY_Q:
