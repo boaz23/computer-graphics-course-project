@@ -4,6 +4,8 @@
 #include "igl/opengl/ViewerData.h"
 #include "igl/opengl/util.h"
 #include <iostream>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 
 static void printMat(const Eigen::Matrix4d& mat)
@@ -83,6 +85,7 @@ void Project::InitResources() {
 	pickingShaderIndex = AddShader("shaders/pickingShader");
 	shaderIndex_cubemap = AddShader("shaders/cubemapShader");
 	shaderIndex_basic = AddShader("shaders/basicShader");
+	shaderIndex_basicColor = AddShader("shaders/basicShaderColor");
 
 	unsigned int textureIndex_plane = AddTexture("textures/plane.png", 2);
 	unsigned int textureIndex_cubeMap_daylightBox = AddTexture("textures/cubemaps/Daylight Box UV.png", 3);
@@ -99,6 +102,7 @@ void Project::InitResources() {
 	};
 	unsigned int slots[] = { 0, 1, 2, 3, 4 };
 
+	int nullMaterial = AddMaterial(nullptr, nullptr, 0); // Avoid having a "default" material
 	materialIndex_box0 = AddMaterial(texIDs + 0, slots + 0, 1);
 	materialIndex_cube = AddMaterial(texIDs + 1, slots + 1, 1);
 	materialIndex_grass = AddMaterial(texIDs + 2, slots + 2, 1);
@@ -174,9 +178,20 @@ void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, c
 		BindMaterial(s, data_list[shapeIndx]->GetMaterial());
 	}
 	if (shaderIndx == 0)
+	{
 		s->SetUniform4f("lightColor", 0xc6 / 255.0f, 0x1e / 255.0f, 0x24 / 255.0f, 0.5f);
-	if (shaderIndx == shaderIndex_basic) {
+	}
+	else if (shaderIndx == shaderIndex_basic)
+	{
 		s->SetUniform1f("Transperancy", data_list[shapeIndx]->alpha);
+	}
+	else if (shaderIndx == shaderIndex_basicColor)
+	{
+		s->SetUniform1f("Transperancy", data_list[shapeIndx]->alpha);
+		if (dynamic_cast<AnimationCameraData*>(data_list[shapeIndx]) != nullptr)
+		{
+			s->SetUniform3f("myColor", Eigen::Vector3f(0.9375, 0.9375, 0.9375));
+		}
 	}
 	s->Unbind();
 }
@@ -212,8 +227,10 @@ int Project::AddShapeFromMenu(const std::string& filePath)
 		return -1;
 	}
 
-	return AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, renderer->GetSceneLayersIndexes(),
+	int shapeIndex = AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, renderer->GetSceneLayersIndexes(),
 		GetDataCreator(currentEditingLayer, true, true));
+	GetViewerDataAt(shapeIndex).SetMaterial(materialIndex_box0);
+	return shapeIndex;
 }
 
 void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
@@ -227,10 +244,10 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 	case CameraKind::Animation:
 		int shapeIndex = AddShapeFromFile
 		(
-			"./data/arm.obj", // TODO: find a better mesh
+			"./data/film_camera.obj", // TODO: find a better mesh
 			-1,
 			TRIANGLES,
-			shaderIndex_basic,
+			shaderIndex_basicColor,
 			renderer->GetSceneLayersIndexes(),
 			[this, &cameraIndex]()
 			{
@@ -238,8 +255,10 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 			}
 		);
 		camerasToMesh.insert(std::pair<int, int>{cameraIndex, shapeIndex});
+		const constexpr double camera_size = 1.0 / 32.0;
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
-		shape->MyRotate(Eigen::Vector3d(0, 1, 0), 90);
+		shape->MyScale(Eigen::Vector3d(camera_size, camera_size, camera_size));
+		shape->MyRotate(Eigen::Vector3d(0, 1, 0), M_PI_2);
 		break;
 	}
 }

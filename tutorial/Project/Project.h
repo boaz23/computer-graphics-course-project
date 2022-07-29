@@ -73,6 +73,7 @@ protected:
 private:
 	int shaderIndex_cubemap;
 	int shaderIndex_basic;
+	int shaderIndex_basicColor;
 	int materialIndex_grass;
 	int materialIndex_box0;
 	int pickingShaderIndex;
