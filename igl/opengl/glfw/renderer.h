@@ -180,8 +180,6 @@ public:
 
     inline std::vector<WindowSection*>& GetSections() { return windowSections; }
 
-    float CalcMoveCoeff(int cameraIndx, int width);
-
     //void SetBuffers();
 
     inline void UpdateZpos(int ypos) { zrel = ypos; }
@@ -190,6 +188,7 @@ public:
         // Changed: clear isMany also
         isPicked = false;
         isMany = false;
+        depths.clear();
         scn->ClearPickedShapes(GetStencilTestLayersIndexes());
     }
     inline bool IsPicked() { return isPicked; }
@@ -258,7 +257,7 @@ private:
     int currentSection;
 	unsigned int next_property_id = 1;
 	float highdpi;
-	float depth;
+    std::vector<double> depths;
 	unsigned int left_view, right_view;
 	double doubleVariable;
 	igl::opengl::glfw::imgui::ImGuiMenu* menu;

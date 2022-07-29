@@ -12,7 +12,7 @@
 #endif
 
 
-Renderer::Renderer(igl::opengl::CameraData cameraData)
+Renderer::Renderer(igl::opengl::CameraData cameraData) : depths{}
 {
 
     callback_init = nullptr;
@@ -274,15 +274,16 @@ bool Renderer::Picking(int x, int y)
     Eigen::Vector4i viewportSize = section.GetViewportSize();
     Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
     Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
-    depth = GetScene()->Picking(Proj*View, section.GetViewportSize(), currentSection, section.GetSceneLayerIndex(), GetStencilTestLayersIndexes(), x, y);
+    float depth = GetScene()->Picking(Proj*View, section.GetViewportSize(), currentSection, section.GetSceneLayerIndex(), GetStencilTestLayersIndexes(), x, y);
     if (depth != -1)
     {
         isMany = false;
         isPicked = true;
+        depths.push_back(depth);
         return true;
     }
-    else {
-        depth = 0;
+    else
+    {
         return false;
     }
 }
@@ -318,15 +319,18 @@ void Renderer::PickMany(int x, int y)
     UnPick();
     Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
     Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
-    depth = scn->AddPickedShapes(Proj*View, viewportSize, currentSection, section.GetSceneLayerIndex(), xMin, xMax, yMin, yMax, GetStencilTestLayersIndexes());
-    if (depth != -1)
+    bool hasAny = scn->AddPickedShapes
+    (
+        Proj*View,
+        viewportSize, currentSection, section.GetSceneLayerIndex(),
+        xMin, xMax, yMin, yMax,
+        GetStencilTestLayersIndexes(),
+        depths
+    );
+    if (hasAny)
     {
-        depth = (depth*2.0f - currentCamera.GetFar()) / (currentCamera.GetNear() - currentCamera.GetFar());
         isMany = true;
         isPicked = true;
-    }
-    else {
-        depth = 0;
     }
 }
 
@@ -443,21 +447,26 @@ void Renderer::MouseProccessing(int button)
     // Changed: allways process mouse input
     WindowSection& section = *windowSections[currentSection];
     igl::opengl::Camera& camera = *cameras[section.GetCamera()];
-    if(button == GLFW_MOUSE_BUTTON_MIDDLE)
-	    scn->MouseProccessing(button, zrel, zrel, CalcMoveCoeff(section.GetCamera(), section.GetViewportSize().z()), 
-            camera.MakeTransd());
+    int xrel{}, yrel{};
+    if (button == GLFW_MOUSE_BUTTON_MIDDLE)
+    {
+        xrel = zrel;
+        yrel = zrel;
+    }
     else
-        scn->MouseProccessing(button, xrel, yrel, CalcMoveCoeff(section.GetCamera(), section.GetViewportSize().z()),
-            camera.MakeTransd());
-}
+    {
+        xrel = this->xrel;
+        yrel = this->yrel;
+    }
 
-float Renderer::CalcMoveCoeff(int cameraIndx, int width)
-{
-    WindowSection& section = GetCurrentSection();
     Eigen::Vector4i viewport = section.GetViewportSize();
-    igl::opengl::Camera& camera = *cameras[cameraIndx];
-    float near = camera.data.zNear, far = camera.data.zFar, angle = camera.data.fov;
-    return ((depth + 2 * near) * (far) / (far + 2 * near) * 2.0 * tanf(angle / 360 * EIGEN_PI)) / viewport(3);
+    scn->MouseProccessing
+    (
+        button,
+        xrel, yrel,
+        camera, viewport.w(),
+        depths
+    );
 }
 
 //unsigned int Renderer::AddBuffer(int infoIndx)
