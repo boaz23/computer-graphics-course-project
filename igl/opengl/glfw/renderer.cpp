@@ -12,7 +12,7 @@
 #endif
 
 
-Renderer::Renderer(igl::opengl::CameraData cameraData)
+Renderer::Renderer(igl::opengl::CameraData cameraData) : depths{}
 {
 
     callback_init = nullptr;
@@ -273,15 +273,16 @@ bool Renderer::Picking(int x, int y)
     igl::opengl::Camera& currentCamera = *cameras[section.GetCamera()];
     Eigen::Matrix4d Proj = currentCamera.GetViewProjection().cast<double>();
     Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
-    depth = GetScene()->Picking(Proj*View, section.GetViewportSize(), currentSection, section.GetSceneLayerIndex(), GetStencilTestLayersIndexes(), x, y);
+    float depth = GetScene()->Picking(Proj*View, section.GetViewportSize(), currentSection, section.GetSceneLayerIndex(), GetStencilTestLayersIndexes(), x, y);
     if (depth != -1)
     {
         isMany = false;
         isPicked = true;
+        depths.push_back(depth);
         return true;
     }
-    else {
-        depth = 0;
+    else
+    {
         return false;
     }
 }
@@ -317,15 +318,18 @@ void Renderer::PickMany(int x, int y)
     UnPick();
     Eigen::Matrix4d Proj = currentCamera.GetViewProjection().cast<double>();
     Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
-    depth = scn->AddPickedShapes(Proj*View, viewportSize, currentSection, section.GetSceneLayerIndex(), xMin, xMax, yMin, yMax, GetStencilTestLayersIndexes());
-    if (depth != -1)
+    bool hasAny = scn->AddPickedShapes
+    (
+        Proj*View,
+        viewportSize, currentSection, section.GetSceneLayerIndex(),
+        xMin, xMax, yMin, yMax,
+        GetStencilTestLayersIndexes(),
+        depths
+    );
+    if (hasAny)
     {
-        depth = (depth*2.0f - currentCamera.GetFar()) / (currentCamera.GetNear() - currentCamera.GetFar());
         isMany = true;
         isPicked = true;
-    }
-    else {
-        depth = 0;
     }
 }
 
@@ -459,14 +463,9 @@ void Renderer::MouseProccessing(int button)
     (
         button,
         xrel, yrel,
-        CalcMoveCoeff(camera, viewport.w()),
-        camera.MakeTransd()
+        camera, viewport.w(),
+        depths
     );
-}
-
-float Renderer::CalcMoveCoeff(igl::opengl::Camera &camera, int size)
-{
-    return camera.CalcMoveCoeff(depth, size);
 }
 
 //unsigned int Renderer::AddBuffer(int infoIndx)

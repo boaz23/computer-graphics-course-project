@@ -47,9 +47,9 @@ public:
 	void InitRenderer();
 	void InitBezierSection();
 	IGL_INLINE bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
-	float AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex,
+	bool AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex,
 		int left, int right, int up, int bottom,
-		const std::vector<std::pair<int, int>>& stencilLayers) override;
+		const std::vector<std::pair<int, int>>& stencilLayers, std::vector<double> &depths) override;
 	int AddShapeFromMenu(const std::string& filePath);
 	
 	float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y) override;

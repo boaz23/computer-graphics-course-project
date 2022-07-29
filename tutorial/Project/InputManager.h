@@ -41,7 +41,8 @@
 				rndr->PickMany((int)x2, (int)y2);
 				rndr->finishSelect();
 			}
-			else {
+			else
+			{
 				// if not in selection mode but many picked check if this is a click or drag and 
 				// single pick if click(else nothing will happend and usual drag will continue)
 				rndr->TrySinglePicking((int)x2, (int)y2);

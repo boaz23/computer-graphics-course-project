@@ -728,8 +728,18 @@ IGL_INLINE bool
     }
 
     //return coordinates in global system for a tip of arm position is local system
-    void Viewer::MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat)
+    void Viewer::MouseProccessing
+    (
+        int button,
+        int xrel,
+        int yrel,
+        const igl::opengl::Camera &camera,
+        int viewpoertSize,
+        const std::vector<double> &depths
+    )
     {
+        Eigen::Matrix4d cameraMat = camera.MakeTransd();
+
         // Changed: modified to support mesh transformations and multipicking
         // TODO no scale?
         Eigen::Matrix4d scnMat = GetTransformationMatrix();
@@ -737,8 +747,11 @@ IGL_INLINE bool
         if (button == 1)
         {
             Eigen::Matrix4d preMat = scnMat * cameraMat.inverse();
-            for (int pShape : pShapes)
+            for (size_t i = 0; i < pShapes.size(); ++i)
             {
+                int pShape = pShapes[i];
+                double depth = depths[i];
+                double movCoeff = camera.CalcMoveCoeff(depth, viewpoertSize);
                 selected_data_index = pShape;
                 WhenTranslate(preMat, -xrel * movCoeff, yrel * movCoeff);
             }

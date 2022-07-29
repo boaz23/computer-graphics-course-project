@@ -18,6 +18,7 @@
 #include "../ViewerData.h"
 #include "ViewerPlugin.h"
 #include "igl/opengl/Movable.h"
+#include "igl/opengl/Camera.h"
 #include "igl/opengl/glfw/Material.h"
 
 
@@ -250,8 +251,8 @@ public:
 
       Eigen::Matrix4d GetPriviousTrans(const Eigen::Matrix4d &View, unsigned int index) const;
 
-      virtual float AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right,
-          int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers) = 0;
+      virtual bool AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right,
+          int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers, std::vector<double> &distances) = 0;
       template<typename T> bool AllPickedShapesSameValue(std::function<T(const ViewerData&)> valueFunc) const
       {
           if (pShapes.size() <= 1)
@@ -273,7 +274,15 @@ public:
           return true;
       }
 
-      void MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat);
+      void MouseProccessing
+      (
+          int button,
+          int xrel,
+          int yrel,
+          const igl::opengl::Camera &camera,
+          int viewpoertSize,
+          const std::vector<double> &depths
+      );
 
       virtual void WhenTranslate(const Eigen::Matrix4d &preMat, float dx, float dy);
       virtual void WhenScroll(const Eigen::Matrix4d &preMat, float dy);

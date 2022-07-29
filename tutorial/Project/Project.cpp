@@ -6,6 +6,7 @@
 #include <iostream>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <limits>
 
 
 static void printMat(const Eigen::Matrix4d& mat)
@@ -466,7 +467,14 @@ ProjectMesh* Project::GetProjectMeshByIndex(int index) {
 	return projectMeshToRet;
 }
 
-float Project::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right, int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers)
+bool Project::AddPickedShapes
+(
+	const Eigen::Matrix4d& PV,
+	const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex,
+	int left, int right, int up, int bottom,
+	const std::vector<std::pair<int, int>>& stencilLayers,
+	std::vector<double> &depths
+)
 {
 	if (renderer->GetCurrentSectionIndex() == editBezierSection) {
 		// Multi picking not allowed in bezier edit
@@ -479,31 +487,38 @@ float Project::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i&
 	for (int i = 0; i < data_list.size(); i++)
 	{ //add to pShapes if the center in range
 		ProjectMesh& mesh = *GetProjectMeshByIndex(i);
-		Eigen::Matrix4d Model = mesh.MakeTransd();
+		Eigen::Matrix4d Model = mesh.MakeTransScaled();
 		Model = CalcParentsTrans(i) * Model;
-		Eigen::Vector4d pos = MVP * Model * Eigen::Vector4d(0, 0, 0, 1);
-		double xpix = (1 + pos.x() / pos.z()) * viewport.z() / 2;
-		double ypix = (1 + pos.y() / pos.z()) * viewport.w() / 2;
+		Eigen::Matrix4d posMatrix = MVP * Model;
+		Eigen::Vector4d centerPos = posMatrix * Eigen::Vector4d(0, 0, 0, 1);
+		double xpix = (1 + centerPos.x() / centerPos.z()) * viewport.z() / 2;
+		double ypix = (1 + centerPos.y() / centerPos.z()) * viewport.w() / 2;
 		if (ShouldRenderViewerData(mesh, sectionIndex, layerIndex) && mesh.IsPickable() && xpix < right && xpix > left && ypix < bottom && ypix > up)
 		{
 			pShapes.push_back(i);
-			if (mesh.DrawOutline()) {
+			if (mesh.DrawOutline())
+			{
 				data_list[i]->AddSectionLayers(stencilLayers);
 			}
 			//std::cout << i << ", ";
 			selected_data_index = i;
 			isFound = true;
+
+			double minDistance = std::numeric_limits<double>::infinity();
+			for (size_t vi = 0; vi < mesh.V.rows(); ++vi)
+			{
+				Eigen::Vector3d vertex = mesh.V.row(vi).head<3>();
+				Eigen::Vector4d transformed = posMatrix * vertex.homogeneous();
+				double distance = transformed.z();
+				if (minDistance > distance)
+				{
+					minDistance = distance;
+				}
+			}
+			depths.push_back(minDistance);
 		}
 	}
-	std::cout << std::endl;
-	if (isFound)
-	{
-		Eigen::Vector4d tmp = MVP * GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index) * data()->MakeTransd() * Eigen::Vector4d(0, 0, 1, 1);
-		return (float)tmp.z();
-	}
-	else
-		return -1;
-	//std::cout << std::endl;
+	return isFound;
 }
 
 
