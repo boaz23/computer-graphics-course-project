@@ -74,20 +74,26 @@ public:
         TranslateControlPoint_C0_Core(segment, index, translationH);
     }
 
+    void TranslateControlPoint_C1(t_index segment, int index, const ph_vector &translation)
+    {
+        ph_vector translationH{};
+        translationH << translation, 0;
+        TranslateControlPoint_C1_Core(segment, index, translationH);
+    }
+
     t_index CreateSegment()
     {
         phc_matrix P{};
         const phc_matrix &lastSegment = GetControlPoints(segments.size() - 1);
 
-        ph_vector p_control = lastSegment.row(lastControlPointIndex);
+        ph_vector p_prev = lastSegment.row(lastControlPointIndex);
+        ph_vector p_control = p_prev;
         P.row(0) = p_control;
-
-        ph_vector p_prev = DefaultSegment.row(0);
-        for (t_index i = 1; i < nControlPoints; ++i)
+        for (auto i = static_cast<t_index_signed>(lastControlPointIndex) - 1; i >= 0; --i)
         {
-            ph_vector p_current = DefaultSegment.row(i);
-            p_control += p_current - p_prev;
-            P.row(i) = p_control;
+            ph_vector p_current = lastSegment.row(i);
+            p_control += p_prev - p_current;
+            P.row(lastControlPointIndex - i) = p_control;
             p_prev = p_current;
         }
 
@@ -164,6 +170,38 @@ private:
             if (nextSegment < segments.size())
             {
                 segments[nextSegment].row(0) += translation;
+            }
+        }
+    }
+    void TranslateControlPoint_C1_Core(t_index segment, int index, const ph_vector &translation)
+    {
+        TranslateControlPoint_C0_Core(segment, index, translation);
+        if (index == 0)
+        {
+            if (segment > 0)
+            {
+                TranslateControlPoint_C0_Core(segment - 1, lastControlPointIndex - 1, 2*translation);
+            }
+        }
+        else if (index == 1)
+        {
+            if (segment > 0)
+            {
+                TranslateControlPoint_C0_Core(segment - 1, lastControlPointIndex - 1, -translation);
+            }
+        }
+        else if (index == lastControlPointIndex - 1)
+        {
+            if (segment < segments.size())
+            {
+                TranslateControlPoint_C0_Core(segment + 1, 1, -translation);
+            }
+        }
+        else if (index == lastControlPointIndex)
+        {
+            if (segment < segments.size() - 1)
+            {
+                TranslateControlPoint_C0_Core(segment, lastControlPointIndex - 1, 2*translation);
             }
         }
     }
