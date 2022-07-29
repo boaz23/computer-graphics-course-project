@@ -11,9 +11,9 @@ public:
 
 	Movable();
 	Movable(const Movable& mov);
-	Eigen::Matrix4f MakeTransScale();
-	Eigen::Matrix4d MakeTransd();
-	Eigen::Matrix4d MakeTransScaled();
+	Eigen::Matrix4f MakeTransScale() const;
+	Eigen::Matrix4d MakeTransd() const;
+	Eigen::Matrix4d MakeTransScaled() const;
 	void MyTranslate(Eigen::Vector3d amt, bool preRotation);
 	void TranslateInSystem(Eigen::Matrix3d rot, Eigen::Vector3d amt);
 	void SetPosition(Eigen::Vector3d newPosition) { Tout.pretranslate(newPosition - Tout.translation()); }

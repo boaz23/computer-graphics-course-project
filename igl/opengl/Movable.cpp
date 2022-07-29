@@ -12,18 +12,18 @@ Movable::Movable(const Movable& mov)
 	Tin = mov.Tin;
 }
 
-Eigen::Matrix4f Movable::MakeTransScale()
+Eigen::Matrix4f Movable::MakeTransScale() const
 {
 	return (Tout.matrix()*Tin.matrix()).cast<float>();
 }
 
-Eigen::Matrix4d Movable::MakeTransScaled()
+Eigen::Matrix4d Movable::MakeTransScaled() const
 {
 	return (Tout.matrix() * Tin.matrix());
 }
 
 
-Eigen::Matrix4d Movable::MakeTransd()
+Eigen::Matrix4d Movable::MakeTransd() const
 {
 	Eigen::Matrix4d mat = Eigen::Matrix4d::Identity();
 	mat.col(3) << Tin.translation(), 1;
