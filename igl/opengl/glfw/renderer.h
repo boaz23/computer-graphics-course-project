@@ -204,6 +204,7 @@ public:
     inline void finishSelect() {
         isSelecting = false;
     }
+
     bool TrySinglePicking(int x, int y);
 
     std::vector<std::pair<int, int>> GetSceneLayersIndexes(bool onlyAutoAdd=true) {
@@ -250,6 +251,7 @@ private:
     int xWhenPress, yWhenPress;
     bool isMany;
     bool isPicked;
+    std::vector<double> depths;
     // Added: added selection flag
     bool isSelecting;
     int materialIndx2D;
@@ -257,7 +259,6 @@ private:
     int currentSection;
 	unsigned int next_property_id = 1;
 	float highdpi;
-    std::vector<double> depths;
 	unsigned int left_view, right_view;
 	double doubleVariable;
 	igl::opengl::glfw::imgui::ImGuiMenu* menu;

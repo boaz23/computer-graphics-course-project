@@ -418,7 +418,7 @@ IGL_INLINE bool
     return 0;
   }
 
-  Eigen::Matrix4d Viewer::CalcParentsTrans(int indx) 
+  Eigen::Matrix4d Viewer::CalcParentsTrans(int indx) const
   {
 	  Eigen::Matrix4d prevTrans = Eigen::Matrix4d::Identity();
 
@@ -658,8 +658,6 @@ IGL_INLINE bool
       return shapeIndex;
     }
 
-
-
     int Viewer::AddShapeCopy
     (
         int shpIndx,
@@ -699,6 +697,31 @@ IGL_INLINE bool
         }
         selected_data_index = 0;
         pShapes.clear();
+    }
+
+    Eigen::Matrix4d Viewer::CalculatePosMatrix(int shapeIndex, const Eigen::Matrix4d &MVP) const
+    {
+        const ViewerData &mesh = GetViewerDataAt(shapeIndex);
+        Eigen::Matrix4d Model = mesh.MakeTransScaled();
+        Model = CalcParentsTrans(shapeIndex) * Model;
+        Eigen::Matrix4d posMatrix = MVP * Model;
+        return posMatrix;
+    }
+
+    double Viewer::CalculateDepthOfMesh(const ViewerData &mesh, const Eigen::Matrix4d &posMatrix) const
+    {
+        double minDepth = std::numeric_limits<double>::infinity();
+        for (size_t vi = 0; vi < mesh.V.rows(); ++vi)
+        {
+            Eigen::Vector3d vertex = mesh.V.row(vi).head<3>();
+            Eigen::Vector4d transformed = posMatrix * vertex.homogeneous();
+            double depth = transformed.z();
+            if (minDepth > depth)
+            {
+                minDepth = depth;
+            }
+        }
+        return minDepth;
     }
 
     Eigen::Matrix4d Viewer::GetTransformationMatrix(int dataIndex) const

@@ -292,7 +292,8 @@ bool Renderer::TrySinglePicking(int x, int y)
 {
     // Added: try to single picking when in many selected mode if the click is singular
     double dist = sqrt(pow(xWhenPress - x, 2) + pow(yWhenPress - y, 2));
-    if (IsMany() && dist <= 3) {
+    if (IsMany() && dist <= 3.0)
+    {
         return Picking(x, y);
     }
     return false;

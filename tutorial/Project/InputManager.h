@@ -8,7 +8,8 @@
 
 	void glfw_mouse_callback(GLFWwindow* window,int button, int action, int mods)
 	{	
-		if (ImGui::GetIO().WantCaptureMouse) {
+		if (ImGui::GetIO().WantCaptureMouse)
+		{
 			return;
 		}
 		bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
@@ -22,18 +23,23 @@
 			if (button == GLFW_MOUSE_BUTTON_LEFT)
 				rndr->Pressed();
 			// if not in select many mode and shift not pressed -> single picking
-			if (!shiftPressed && !rndr->IsMany()) {
-				if (rndr->Picking((int)x2, (int)y2))
+			if (rndr->IsMany())
+			{
+
+			}
+			else
+			{
+				if (shiftPressed)
+				{
+					rndr->StartSelect();
+				}
+				else if (rndr->Picking((int)x2, (int)y2))
 				{
 					rndr->UpdatePosition((float)x2, (float)y2);
 				}
 			}
-			// start select many mode
-			else if (shiftPressed) {
-				rndr->StartSelect();
-			}
 		}
-		else
+		else if (action == GLFW_RELEASE)
 		{
 			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 			// if exiting select many mode apply selection
@@ -61,7 +67,8 @@
 	
 	void glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 	{
-		if (ImGui::GetIO().WantCaptureMouse) {
+		if (ImGui::GetIO().WantCaptureMouse)
+		{
 			return;
 		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
@@ -93,7 +100,8 @@
 
 	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
-		if (ImGui::GetIO().WantCaptureKeyboard) {
+		if (ImGui::GetIO().WantCaptureKeyboard)
+		{
 			return;
 		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
