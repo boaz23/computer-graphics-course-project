@@ -25,7 +25,7 @@
 			// if not in select many mode and shift not pressed -> single picking
 			if (rndr->IsMany())
 			{
-
+				rndr->RecalculateDepths();
 			}
 			else
 			{

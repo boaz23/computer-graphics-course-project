@@ -188,6 +188,7 @@ public:
         // Changed: clear isMany also
         isPicked = false;
         isMany = false;
+        manyPickCameraTransformation = Eigen::Matrix4d::Identity();
         depths.clear();
         scn->ClearPickedShapes(GetStencilTestLayersIndexes());
     }
@@ -206,6 +207,8 @@ public:
     }
 
     bool TrySinglePicking(int x, int y);
+    void RecalculateDepths();
+    void RecalculateDepths(const WindowSection &section, const Eigen::Matrix4d &ViewInv);
 
     std::vector<std::pair<int, int>> GetSceneLayersIndexes(bool onlyAutoAdd=true) {
         std::vector<std::pair<int, int>> layers;
@@ -252,6 +255,7 @@ private:
     bool isMany;
     bool isPicked;
     std::vector<double> depths;
+    Eigen::Matrix4d manyPickCameraTransformation;
     // Added: added selection flag
     bool isSelecting;
     int materialIndx2D;

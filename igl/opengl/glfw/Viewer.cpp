@@ -724,6 +724,15 @@ IGL_INLINE bool
         return minDepth;
     }
 
+    void Viewer::AppendDepthsOfPicked(std::vector<double> &depths, const Eigen::Matrix4d &MVP) const
+    {
+        for (int pShape : pShapes)
+        {
+            Eigen::Matrix4d posMatrix = CalculatePosMatrix(pShape, MVP);
+            depths.push_back(CalculateDepthOfMesh(GetViewerDataAt(pShape), posMatrix));
+        }
+    }
+
     Eigen::Matrix4d Viewer::GetTransformationMatrix(int dataIndex) const
     {
         Eigen::Matrix4d scnMat = Eigen::Matrix4d::Identity();

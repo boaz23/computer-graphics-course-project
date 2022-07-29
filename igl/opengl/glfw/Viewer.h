@@ -257,6 +257,8 @@ public:
           int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers, std::vector<double> &depths) = 0;
 
       double CalculateDepthOfMesh(const ViewerData &mesh, const Eigen::Matrix4d &posMatrix) const;
+      void AppendDepthsOfPicked(std::vector<double> &depths, const Eigen::Matrix4d &MVP) const;
+
       template<typename T> bool AllPickedShapesSameValue(std::function<T(const ViewerData&)> valueFunc) const
       {
           if (pShapes.size() <= 1)
