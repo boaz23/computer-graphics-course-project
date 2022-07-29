@@ -52,12 +52,22 @@ IGL_INLINE void igl::opengl::Camera::SetProjection(float fov, float relationWH)
     data.relationWH = relationWH;
 }
 
-IGL_INLINE float igl::opengl::Camera::CalcMoveCoeff(float depth,int width) const
+IGL_INLINE float igl::opengl::Camera::CalcMoveCoeff(float depth,int size) const
 {
-    float z = data.zFar + depth * (data.zNear - data.zFar);
-    if (data.fov > 0)
-        return width / data.zFar * z * data.zNear / 2.0f / tanf(data.fov / 360 * igl::PI); // / camera z translate;
+    float angle = data.fov;
+    if (angle > 0)
+    {
+        float near = data.zNear, far = data.zFar;
+        return ((depth + 2 * near) * far / (far + 2 * near) * 2.0 * tanf(angle / 360 * EIGEN_PI)) / size;
+    }
     else
-        return 0.5f*width;
+    {
+        return 0.5 * size;
+    }
+    //float z = data.zFar + depth * (data.zNear - data.zFar);
+    //if (data.fov > 0)
+    //    return width / data.zFar * z * data.zNear / 2.0f / tanf(data.fov / 360 * igl::PI); // / camera z translate;
+    //else
+    //    return 0.5f*width;
 }
 

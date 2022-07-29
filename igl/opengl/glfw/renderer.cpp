@@ -442,21 +442,31 @@ void Renderer::MouseProccessing(int button)
     // Changed: allways process mouse input
     WindowSection& section = *windowSections[currentSection];
     igl::opengl::Camera& camera = *cameras[section.GetCamera()];
-    if(button == GLFW_MOUSE_BUTTON_MIDDLE)
-	    scn->MouseProccessing(button, zrel, zrel, CalcMoveCoeff(section.GetCamera(), section.GetViewportSize().z()), 
-            camera.MakeTransd());
+    int xrel{}, yrel{};
+    if (button == GLFW_MOUSE_BUTTON_MIDDLE)
+    {
+        xrel = zrel;
+        yrel = zrel;
+    }
     else
-        scn->MouseProccessing(button, xrel, yrel, CalcMoveCoeff(section.GetCamera(), section.GetViewportSize().z()),
-            camera.MakeTransd());
+    {
+        xrel = this->xrel;
+        yrel = this->yrel;
+    }
+
+    Eigen::Vector4i viewport = section.GetViewportSize();
+    scn->MouseProccessing
+    (
+        button,
+        xrel, yrel,
+        CalcMoveCoeff(camera, viewport.w()),
+        camera.MakeTransd()
+    );
 }
 
-float Renderer::CalcMoveCoeff(int cameraIndx, int width)
+float Renderer::CalcMoveCoeff(igl::opengl::Camera &camera, int size)
 {
-    WindowSection& section = GetCurrentSection();
-    Eigen::Vector4i viewport = section.GetViewportSize();
-    igl::opengl::Camera& camera = *cameras[cameraIndx];
-    float near = camera.data.zNear, far = camera.data.zFar, angle = camera.data.fov;
-    return ((depth + 2 * near) * (far) / (far + 2 * near) * 2.0 * tanf(angle / 360 * EIGEN_PI)) / viewport(3);
+    return camera.CalcMoveCoeff(depth, size);
 }
 
 //unsigned int Renderer::AddBuffer(int infoIndx)

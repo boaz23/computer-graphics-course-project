@@ -474,7 +474,7 @@ float Project::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i&
 	}
 	//not correct when the shape is scaled
 	Eigen::Matrix4d MVP = PV * MakeTransd();
-	std::cout << "picked shapes  ";
+	//std::cout << "picked shapes  ";
 	bool isFound = false;
 	for (int i = 0; i < data_list.size(); i++)
 	{ //add to pShapes if the center in range
@@ -486,11 +486,11 @@ float Project::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i&
 		double ypix = (1 + pos.y() / pos.z()) * viewport.w() / 2;
 		if (ShouldRenderViewerData(mesh, sectionIndex, layerIndex) && mesh.IsPickable() && xpix < right && xpix > left && ypix < bottom && ypix > up)
 		{
-			pShapes.push_back(i);			
+			pShapes.push_back(i);
 			if (mesh.DrawOutline()) {
 				data_list[i]->AddSectionLayers(stencilLayers);
 			}
-			std::cout << i << ", ";
+			//std::cout << i << ", ";
 			selected_data_index = i;
 			isFound = true;
 		}
@@ -503,6 +503,7 @@ float Project::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i&
 	}
 	else
 		return -1;
+	//std::cout << std::endl;
 }
 
 

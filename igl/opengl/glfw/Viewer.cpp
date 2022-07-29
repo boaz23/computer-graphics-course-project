@@ -214,7 +214,7 @@ IGL_INLINE bool
                   //std::cout << "faces normals:  " << corner_normals.row(fNormIndices(k, 0)) << std::endl;
               }
               
-              std::cout << "faces normals: \n" << N << std::endl;
+              //std::cout << "faces normals: \n" << N << std::endl;
              
               normal_read = true;
           }
@@ -439,9 +439,7 @@ IGL_INLINE bool
         unsigned int flgs, unsigned int property_id
     )
     {
-
         Eigen::Matrix4f Normal;
-
         if (!staticScene)
             Normal = MakeTransScale();
         else
@@ -703,62 +701,88 @@ IGL_INLINE bool
         pShapes.clear();
     }
 
+    Eigen::Matrix4d Viewer::GetTransformationMatrix(int dataIndex) const
+    {
+        Eigen::Matrix4d scnMat{};
+        if (selected_data_index > 0)
+        {
+            Eigen::Matrix4d previousTransformation = GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index);
+            if (staticScene)
+            {
+                scnMat = previousTransformation;
+            }
+            else
+            {
+                scnMat = MakeTransd() * previousTransformation;
+            }
+        }
+        else if (!staticScene)
+        {
+            scnMat = MakeTransd();
+        }
+        else
+        {
+            scnMat = Eigen::Matrix4d::Identity();
+        }
+        return scnMat;
+    }
+
     //return coordinates in global system for a tip of arm position is local system
     void Viewer::MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat)
     {
         // Changed: modified to support mesh transformations and multipicking
         // TODO no scale?
-        Eigen::Matrix4d scnMat = Eigen::Matrix4d::Identity();
-        if (selected_data_index <= 0 && !staticScene)
-            scnMat = MakeTransd();
-        else if (!staticScene)
-            scnMat = (MakeTransd() * GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index));
-        else if(selected_data_index > 0)
-            scnMat = (GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index));
+        Eigen::Matrix4d scnMat = GetTransformationMatrix();
 
         if (button == 1)
         {
+            Eigen::Matrix4d preMat = scnMat * cameraMat.inverse();
             for (int pShape : pShapes)
             {
                 selected_data_index = pShape;
-                WhenTranslate(scnMat * cameraMat.inverse(), -xrel * movCoeff, yrel * movCoeff);
+                WhenTranslate(preMat, -xrel * movCoeff, yrel * movCoeff);
             }
-            if (pShapes.size() == 0) {
-                MoveCamera([&xrel, &yrel](Movable& movable)
+            if (pShapes.size() == 0)
+            {
+                MoveCamera([xrel, yrel](Movable& movable)
                 {
-                    movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(-xrel * 0.001, yrel*0.001, 0));
+                    movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(-xrel * 0.001, yrel * 0.001, 0));
                 });
             }
         }
         else
         {
-            movCoeff = 2.0f;
-
+            float movCoeff = 2.0f;
             if (button == 0)
             {
+                Eigen::Matrix4d preMat = cameraMat * scnMat;
+                double factor = movCoeff * EIGEN_PI / 8.0 / 180;
+                float dx = -xrel * factor;
+                float dy = yrel * factor;
                 for (int pShape : pShapes)
                 {
                     selected_data_index = pShape;
-                    WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
+                    WhenRotate(preMat, dx, dy);
                 }
-                if (pShapes.size() == 0) {
-                    float dx = -((float)xrel / 180) / movCoeff;
-                    float dy = ((float)yrel / 180) / movCoeff;
+                if (pShapes.size() == 0)
+                {
                     RotateCamera(dx, dy);
                 }
             }
             else
             {
-
+                double dy = yrel * movCoeff;
+                Eigen::Matrix4d preMat = cameraMat * scnMat;
                 for (int pShape : pShapes)
                 {
                     selected_data_index = pShape;
-                    WhenScroll(cameraMat * scnMat, yrel / movCoeff);
+                    WhenScroll(preMat, dy);
                 }
-                if (pShapes.size() == 0) {
-                    MoveCamera([&xrel, &yrel, &movCoeff](Movable& movable)
+                if (pShapes.size() == 0)
+                {
+                    MoveCamera([dy](Movable& movable)
                     {
-                        movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(0.0, 0.0, yrel / movCoeff));
+                        movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(0.0, 0.0, dy));
                     });
                 }
             }
@@ -811,7 +835,7 @@ IGL_INLINE bool
 
     }
 
-    void Viewer::WhenTranslate( const Eigen::Matrix4d& preMat, float dx, float dy)
+    void Viewer::WhenTranslate(const Eigen::Matrix4d& preMat, float dx, float dy)
     {
         Eigen::Matrix3d rot = preMat.block<3, 3>(0, 0);
         Transform(GetMovableTransformee(), [&rot, &dx, &dy](Movable &movable)
@@ -861,7 +885,7 @@ IGL_INLINE bool
         return (materials.size() - 1);
     }
 
-    Eigen::Matrix4d Viewer::GetPriviousTrans(const Eigen::Matrix4d& View, unsigned int index)
+    Eigen::Matrix4d Viewer::GetPriviousTrans(const Eigen::Matrix4d& View, unsigned int index) const
     {
         Eigen::Matrix4d Model = Eigen::Matrix4d::Identity();
         int p = index >= 0 ? parents[index] : -1;

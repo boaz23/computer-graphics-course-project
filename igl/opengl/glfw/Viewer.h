@@ -248,7 +248,7 @@ public:
 
       int AddMaterial(unsigned int *texIndices, unsigned int *slots, unsigned int size);
 
-      Eigen::Matrix4d GetPriviousTrans(const Eigen::Matrix4d &View, unsigned int index);
+      Eigen::Matrix4d GetPriviousTrans(const Eigen::Matrix4d &View, unsigned int index) const;
 
       virtual float AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right,
           int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers) = 0;
@@ -273,17 +273,22 @@ public:
           return true;
       }
 
-      void
-      MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat);
+      void MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat);
 
       virtual void WhenTranslate(const Eigen::Matrix4d &preMat, float dx, float dy);
       virtual void WhenScroll(const Eigen::Matrix4d &preMat, float dy);
       virtual void WhenRotate(const Eigen::Matrix4d &preMat, float dx, float dy);
 
     Movable &GetMovableTransformee(int shapeIndex);
-    Movable &GetMovableTransformee()
+    IGL_INLINE Movable &GetMovableTransformee()
     {
         return GetMovableTransformee(selected_data_index);
+    }
+
+    Eigen::Matrix4d GetTransformationMatrix(int dataIndex) const;
+    IGL_INLINE Eigen::Matrix4d GetTransformationMatrix() const
+    {
+        return GetTransformationMatrix(selected_data_index);
     }
 
 protected:

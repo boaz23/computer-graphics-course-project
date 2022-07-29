@@ -341,7 +341,7 @@ public:
             && !hide;
     }
 
-    inline bool IsStatic() { return isStatic; }
+    inline bool IsStatic() const { return isStatic; }
     inline void SetStatic() { isStatic = !isStatic; }
     inline void Hide() { hide = true; }
     inline void UnHide() { hide = false; }

@@ -45,7 +45,7 @@ namespace igl {
 
             IGL_INLINE void SetProjection(float fov, float relationWH);
 
-            IGL_INLINE float CalcMoveCoeff(float depth, int width) const;
+            IGL_INLINE float CalcMoveCoeff(float depth, int size) const;
 
             Eigen::Matrix4f _projection;
             CameraData data;

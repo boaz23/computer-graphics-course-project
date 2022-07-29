@@ -180,7 +180,7 @@ public:
 
     inline std::vector<WindowSection*>& GetSections() { return windowSections; }
 
-    float CalcMoveCoeff(int cameraIndx, int width);
+    float CalcMoveCoeff(igl::opengl::Camera &camera, int size);
 
     //void SetBuffers();
 
