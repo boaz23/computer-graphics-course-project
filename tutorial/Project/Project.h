@@ -64,8 +64,12 @@ public:
 	inline bool IsSplitMode() { return splitMode; };
 	inline bool IsEditBezierMode() { return editBezierMode; }
 	void InitResources();
-	igl::opengl::glfw::ViewerDataCreateFunc GetDataCreator(int layer, bool isPickable, bool outline);
+	igl::opengl::glfw::ViewerDataCreateFunc GetDataCreator(int layer, bool isPickable, bool outline, 
+		bool allowTransparent, Eigen::Vector3d color=Eigen::Vector3d(1, 0, 0));
 	ProjectMesh* CreateProjectMesh();
+	double GetShapeAlpha(int index) override {
+		return GetProjectMeshByIndex(index)->GetAlpha();
+	};
 protected:
 	bool ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex) const override;
 	void Transform(Movable &movable, std::function<void(Movable &)> transform) override;

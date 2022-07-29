@@ -119,7 +119,7 @@ IGL_INLINE void Renderer::draw_by_info(int sectionIndex, int layerIndex, int inf
     else
         glDisable(GL_BLEND);
 
-    Eigen::Matrix4f Proj = camera.GetViewProjection().cast<float>();
+    Eigen::Matrix4f Proj = camera.GetViewProjection(viewportSize(2)*1.0/viewportSize(3)).cast<float>();
     Eigen::Matrix4f View = camera.MakeTransScaled().inverse().cast<float>();
 
     if (info.flags & toClear)
@@ -271,7 +271,8 @@ bool Renderer::Picking(int x, int y)
     UnPick();
     WindowSection& section = *windowSections[currentSection];
     igl::opengl::Camera& currentCamera = *cameras[section.GetCamera()];
-    Eigen::Matrix4d Proj = currentCamera.GetViewProjection().cast<double>();
+    Eigen::Vector4i viewportSize = section.GetViewportSize();
+    Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
     Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
     depth = GetScene()->Picking(Proj*View, section.GetViewportSize(), currentSection, section.GetSceneLayerIndex(), GetStencilTestLayersIndexes(), x, y);
     if (depth != -1)
@@ -315,7 +316,7 @@ void Renderer::PickMany(int x, int y)
     int xMax = std::max(xWhenPress, xold) - viewportSize.x();
     int yMax = viewportSize.w() - std::min(localPressY, localReleaseY);
     UnPick();
-    Eigen::Matrix4d Proj = currentCamera.GetViewProjection().cast<double>();
+    Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
     Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
     depth = scn->AddPickedShapes(Proj*View, viewportSize, currentSection, section.GetSceneLayerIndex(), xMin, xMax, yMin, yMax, GetStencilTestLayersIndexes());
     if (depth != -1)

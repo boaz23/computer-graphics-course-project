@@ -37,9 +37,10 @@ Project::Project(igl::opengl::CameraData camera) :
 	rightSection{-1},
 	editBezierSection{-1},
 	designCameraIndex{-1},
-	editCameraIndex{-1}	
+	editCameraIndex{-1},
+	shaderIndex_basicColor{-1}
 {
-	data_list.front() = new ProjectMesh(0, false, false);
+	data_list.front() = new ProjectMesh(0, false, false, false);
 	data_list.front()->id = 0;
 	// Per face
 	data()->set_face_based(false);
@@ -59,9 +60,12 @@ void Project::InitRenderer() {
 	editBezierSection = renderer->AddSection(
 		DISPLAY_WIDTH / 2, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT,
 		0, false, false, false, false, false);
+	WindowSection& bezierSection = renderer->GetSection(editBezierSection);
+	bezierSection.ClearDrawFlag(bezierSection.GetSceneLayerIndex(), 0, depthTest | blend);
 	designCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), cameraData);
 	// bezier edit camera
-	igl::opengl::CameraData editBezierCameraData(45, DISPLAY_RATIO, NEAR, FAR);
+	// TODO aspect ratio not realy matter
+	igl::opengl::CameraData editBezierCameraData(45, 0.75, NEAR, FAR);
 	editCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), editBezierCameraData);
 	// Default full screen
 	renderer->ActivateSection(fullScreenSection);
@@ -70,14 +74,17 @@ void Project::InitRenderer() {
 
 void Project::InitBezierSection() {
 	std::pair<int, int> bezierSectionSceneLayerKey = { editBezierSection, renderer->GetSection(editBezierSection).GetSceneLayerIndex() };
-	int bezierPlane = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex,
-		{ bezierSectionSceneLayerKey }, GetDataCreator(0, false, false));
+	int bezierPlane = AddShape(Plane, -2, TRIANGLES, shaderIndex_basicColor,
+		{ bezierSectionSceneLayerKey }, GetDataCreator(0, false, false, false, 
+			Eigen::Vector3d(1.0*0x18/0xff, 1.0*0x17/0xff, 1.0*0x18/0xff)));
+	selected_data_index = bezierPlane;
+	ShapeTransformation(zTranslate, -1.1f, 1);
 	SetShapeStatic(bezierPlane);
 	for (int i = 0; i < 4; i++) {
-		controlPointsMeshIndexes[i] = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, { bezierSectionSceneLayerKey },
-			GetDataCreator(0, true, false));
+		controlPointsMeshIndexes[i] = AddShapeFromFile("./data/cube.obj", -1, TRIANGLES, shaderIndex_basicColor, { bezierSectionSceneLayerKey },
+			GetDataCreator(0, true, false, false, Eigen::Vector3d(1.0*0xcc/0xff, 0.0, 0.0)));
 		ShapeTransformation(xTranslate, -1.5f + (float)i, 1);
-		ShapeTransformation(scaleAll, 0.2f, 1);
+		ShapeTransformation(scaleAll, 0.05f, 1);
 	}
 }
 
@@ -121,13 +128,13 @@ void Project::InitResources() {
 void Project::InitScene() {
 	std::vector<std::pair<int, int>>& sceneLayers = renderer->GetSceneLayersIndexes();
 	int sceneCube = AddShape(Cube, -2, TRIANGLES, shaderIndex_cubemap, sceneLayers, 
-		GetDataCreator(0, false, false));
+		GetDataCreator(0, false, false, false));
 	int scissorBox = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex, renderer->GetScissorsTestLayersIndexes(), 
-		GetDataCreator(0, false, false));
+		GetDataCreator(0, false, false, false));
 	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers, 
-		GetDataCreator(currentEditingLayer, true, true));
+		GetDataCreator(currentEditingLayer, true, true, true));
 	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers, 
-		GetDataCreator(currentEditingLayer, true, true));
+		GetDataCreator(currentEditingLayer, true, true, true));
 	//int camera = AddShapeFromFile("./data/film_camera 2.obj", -1, TRIANGLES, shaderIndex_basic, sceneLayers);
 
 	SetShapeMaterial(sceneCube, materialIndex_cube);
@@ -172,26 +179,24 @@ void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, c
 	s->SetUniformMat4f("Proj", Proj);
 	s->SetUniformMat4f("View", View);
 	s->SetUniformMat4f("Model", Model);
+	ProjectMesh& mesh = *GetProjectMeshByIndex(shapeIndx);
 
-	if (data_list[shapeIndx]->GetMaterial() >= 0 && !materials.empty())
+	if (mesh.GetMaterial() >= 0 && !materials.empty())
 	{
-		BindMaterial(s, data_list[shapeIndx]->GetMaterial());
+		BindMaterial(s, mesh.GetMaterial());
 	}
-	if (shaderIndx == 0)
+	if (shaderIndx == pickingShaderIndex)
 	{
 		s->SetUniform4f("lightColor", 0xc6 / 255.0f, 0x1e / 255.0f, 0x24 / 255.0f, 0.5f);
 	}
 	else if (shaderIndx == shaderIndex_basic)
 	{
-		s->SetUniform1f("Transperancy", data_list[shapeIndx]->alpha);
+		s->SetUniform1f("Transperancy", mesh.GetAlpha());
 	}
 	else if (shaderIndx == shaderIndex_basicColor)
 	{
-		s->SetUniform1f("Transperancy", data_list[shapeIndx]->alpha);
-		if (dynamic_cast<AnimationCameraData*>(data_list[shapeIndx]) != nullptr)
-		{
-			s->SetUniform3f("myColor", Eigen::Vector3f(0.9375, 0.9375, 0.9375));
-		}
+		s->SetUniform1f("Transperancy", mesh.GetAlpha());
+		s->SetUniform3f("myColor", mesh.GetColor().cast<float>());
 	}
 	s->Unbind();
 }
@@ -228,7 +233,7 @@ int Project::AddShapeFromMenu(const std::string& filePath)
 	}
 
 	int shapeIndex = AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, renderer->GetSceneLayersIndexes(),
-		GetDataCreator(currentEditingLayer, true, true));
+		GetDataCreator(currentEditingLayer, true, true, true));
 	GetViewerDataAt(shapeIndex).SetMaterial(materialIndex_box0);
 	return shapeIndex;
 }
@@ -521,10 +526,10 @@ void Project::WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy)
 }
 
 
-igl::opengl::glfw::ViewerDataCreateFunc Project::GetDataCreator(int layer, bool isPicking, bool outline) {
-	return [this, layer, isPicking, outline]()
+igl::opengl::glfw::ViewerDataCreateFunc Project::GetDataCreator(int layer, bool isPicking, bool outline, bool allowTransparent, Eigen::Vector3d color) {
+	return [this, layer, isPicking, outline, allowTransparent, color]()
 	{
-		return new ProjectMesh(layer, isPicking, outline);
+		return new ProjectMesh(layer, isPicking, outline, allowTransparent, color);
 	};
 }
 void Project::RotateCamera(double dx, double dy) {

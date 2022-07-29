@@ -322,6 +322,7 @@ public:
 
       virtual void RotateCamera(double dx, double dy) {};
 
+      virtual double GetShapeAlpha(int index) = 0;
   protected:
       virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const;
       Texture* Viewer::AddTexture_Core(const std::string& textureFileName, int dim);

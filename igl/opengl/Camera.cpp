@@ -52,6 +52,25 @@ IGL_INLINE void igl::opengl::Camera::SetProjection(float fov, float relationWH)
     data.relationWH = relationWH;
 }
 
+IGL_INLINE Eigen::Matrix4f igl::opengl::Camera::CalcProjection(float relationWH) const
+{
+    Eigen::Matrix4f toRet;
+    if (data.fov > 0)
+    {
+        float fH = tan(data.fov / 360.0 * igl::PI) * data.zNear;
+        float fW = fH * relationWH;
+        frustum(-fW, fW, -fH, fH, data.zNear, data.zFar, toRet);
+    }
+    else {
+        float camera_view_angle = 45.0;
+        float h = tan(camera_view_angle / 360.0 * igl::PI) * (length);
+        ortho(-h * relationWH, h * relationWH, -h, h, data.zNear, data.zFar, toRet);
+    }
+    return toRet;
+}
+
+
+
 IGL_INLINE float igl::opengl::Camera::CalcMoveCoeff(float depth,int width) const
 {
     float z = data.zFar + depth * (data.zNear - data.zFar);

@@ -214,7 +214,7 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       {
           project->ToggleSplitMode();
       }
-      if (project->isInDesignMode && project->renderer->IsPicked() && ImGui::Checkbox("Edit Bezier", &splitMode))
+      if (project->isInDesignMode && project->renderer->IsPicked() && ImGui::Checkbox("Edit Bezier", &editBezierMode))
       {
           project->ToggleEditBezierMode();
       }
@@ -418,29 +418,42 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
 
       ImGui::PopItemWidth();
   }
-
-  if (project != nullptr && ImGui::CollapsingHeader("Transperancy", ImGuiTreeNodeFlags_DefaultOpen))
+  bool selectedTransparentableShapes = false;
+  if (project != nullptr) {
+      for (int pshape : project->pShapes) {
+          if (project->GetProjectMeshByIndex(pshape)->IsTransparentAllowed()) {
+              selectedTransparentableShapes = true;
+              break;
+          }
+      }
+  }
+  if (project != nullptr && selectedTransparentableShapes && ImGui::CollapsingHeader("Transperancy", ImGuiTreeNodeFlags_DefaultOpen))
   {
       ImGui::Text("Alpha:");
       ImGui::SameLine(0, p);
 
       // Objects Transperancy
       if (project->pShapes.size() > 0)
-          _trans_slidebar_val = project->data_list[project->pShapes[project->pShapes.size() - 1]]->alpha;
+          _trans_slidebar_val = project->GetProjectMeshByIndex(project->pShapes[project->pShapes.size() - 1])->GetAlpha();
 
       bool _hide_slide_val = false;
 
       if (project->pShapes.size() > 1)
       {
           for (int pshape : project->pShapes)
-              if (project->data_list[pshape]->alpha != project->data_list[project->pShapes[0]]->alpha)
+              if (project->GetProjectMeshByIndex(pshape)->GetAlpha() != project->GetProjectMeshByIndex(project->pShapes[0])->GetAlpha())
                   _hide_slide_val = true;
       }
 
-      if (ImGui::SliderFloat("##alphaSlider", &_trans_slidebar_val, 0.0, 1.0, _hide_slide_val ? "" : "%.2f"))
-          if (project->pShapes.size() > 0)
-              for (int pshape : project->pShapes)
-                  project->data_list[pshape]->alpha = _trans_slidebar_val;
+      if (ImGui::SliderFloat("##alphaSlider", &_trans_slidebar_val, 0.0, 1.0, _hide_slide_val ? "" : "%.2f")) {
+          if (project->pShapes.size() > 0) {
+              for (int pshape : project->pShapes) {
+                  if (project->GetProjectMeshByIndex(pshape)->IsTransparentAllowed()) {
+                      project->GetProjectMeshByIndex(pshape)->SetAlpha(_trans_slidebar_val);
+                  }
+              }
+          }
+      }
   }
 
   // Viewing options

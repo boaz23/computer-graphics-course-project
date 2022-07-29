@@ -452,7 +452,7 @@ IGL_INLINE bool
         for (size_t i = 0; i < data_list.size(); ++i)
         {
             ViewerData *shape = data_list[i];
-            if (shape->alpha == 1.0f)
+            if (GetShapeAlpha(i) == 1.0f)
             {
                 opaqueDataIndices.push_back(i);
             }
