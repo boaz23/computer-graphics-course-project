@@ -20,6 +20,8 @@ public:
 	void SetUniform1i(const std::string& name, int value);
 	void SetUniform4i(const std::string& name, int vi0,int vi1,int vi2,int vi3);
 	void SetUniform1f(const std::string& name, float value);
+	void SetUniform3f(const std::string &name, Eigen::Vector3f value);
+	void SetUniform3f(const std::string &name, float v0, float v1, float v2);
 	void SetUniform4f(const std::string& name, float v0, float v1, float f2, float f3 );
 	void SetUniformMat4f(const std::string& name, const Eigen::Matrix4f&  matrix);
 	void SetUniformMat4fv(const std::string& name,const Eigen::Matrix4f *matrix,const int length);

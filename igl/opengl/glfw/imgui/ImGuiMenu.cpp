@@ -256,14 +256,14 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
         static int selectedMaterialComboIndex = 0;
         auto& availableMaterials = project->availableMaterials;
 
-        bool allSameLayer = viewer.pShapes.size() == 0 ? false :
+        bool allSameMaterial = viewer.pShapes.size() == 0 ? false :
             viewer.AllPickedShapesSameValue<unsigned int>([](const igl::opengl::ViewerData& shape)
             {
                 return shape.GetMaterial();
             });
         bool fieldChanged{ false };
         int materialComboIndex{ -1 };
-        if (allSameLayer)
+        if (allSameMaterial)
         {
             unsigned int commonMaterialIndex = viewer.GetViewerDataAt(viewer.pShapes[0]).GetMaterial();
             for (size_t i = 0; i < availableMaterials.size(); ++i)
@@ -276,20 +276,27 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
                 }
             }
 
-            if (selectedMaterialComboIndex != materialComboIndex)
+            if (materialComboIndex >= 0)
             {
-                selectedMaterialComboIndex = materialComboIndex;
-                fieldChanged = true;
+                if (selectedMaterialComboIndex != materialComboIndex)
+                {
+                    selectedMaterialComboIndex = materialComboIndex;
+                    fieldChanged = true;
+                }
+            }
+            else
+            {
+                allSameMaterial = false;
             }
         }
 
-        const std::string& materialComboPreview = allSameLayer ? availableMaterials[materialComboIndex].second : "";
+        const std::string& materialComboPreview = allSameMaterial ? availableMaterials[materialComboIndex].second : "";
         if (ImGui::BeginCombo("##material", materialComboPreview.c_str()))
         {
             bool valueChanged{ false };
             for (size_t i = 0; i < availableMaterials.size(); ++i)
             {
-                const bool item_selected = i == selectedMaterialComboIndex && allSameLayer;
+                const bool item_selected = i == selectedMaterialComboIndex && allSameMaterial;
                 const char* item_text = availableMaterials[i].second.c_str();
                 if (ImGui::Selectable(item_text, item_selected))
                 {
