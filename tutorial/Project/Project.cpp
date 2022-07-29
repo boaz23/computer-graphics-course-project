@@ -517,5 +517,3 @@ void Project::RotateCamera(double dx, double dy) {
 		});
 	}
 }
-
-

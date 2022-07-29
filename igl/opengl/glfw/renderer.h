@@ -262,7 +262,6 @@ private:
 	unsigned int left_view, right_view;
 	double doubleVariable;
 	igl::opengl::glfw::imgui::ImGuiMenu* menu;
-	double z;
 
     void draw_by_info(int sectionIndex, int layerIndex, int info_index, int width, int height);
 

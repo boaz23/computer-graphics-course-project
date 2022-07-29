@@ -721,7 +721,7 @@ IGL_INLINE bool
             for (int pShape : pShapes)
             {
                 selected_data_index = pShape;
-                WhenTranslate(scnMat * cameraMat.inverse(), -xrel / movCoeff, yrel / movCoeff);
+                WhenTranslate(scnMat * cameraMat.inverse(), -xrel * movCoeff, yrel * movCoeff);
             }
             if (pShapes.size() == 0) {
                 MoveCamera([&xrel, &yrel](Movable& movable)
@@ -809,12 +809,6 @@ IGL_INLINE bool
             }
         }
 
-    }
-
-    float Viewer::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y)
-    {
-        // Changed: default picking
-        return -1.0;
     }
 
     void Viewer::WhenTranslate( const Eigen::Matrix4d& preMat, float dx, float dy)

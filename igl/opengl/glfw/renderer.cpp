@@ -276,7 +276,6 @@ bool Renderer::Picking(int x, int y)
     depth = GetScene()->Picking(Proj*View, section.GetViewportSize(), currentSection, section.GetSceneLayerIndex(), GetStencilTestLayersIndexes(), x, y);
     if (depth != -1)
     {
-        depth = (depth * 2.0f - currentCamera.GetFar()) / (currentCamera.GetNear() - currentCamera.GetFar());
         isMany = false;
         isPicked = true;
         return true;
@@ -453,7 +452,11 @@ void Renderer::MouseProccessing(int button)
 
 float Renderer::CalcMoveCoeff(int cameraIndx, int width)
 {
-    return cameras[cameraIndx]->CalcMoveCoeff(depth,width);
+    WindowSection& section = GetCurrentSection();
+    Eigen::Vector4i viewport = section.GetViewportSize();
+    igl::opengl::Camera& camera = *cameras[cameraIndx];
+    float near = camera.data.zNear, far = camera.data.zFar, angle = camera.data.fov;
+    return ((depth + 2 * near) * (far) / (far + 2 * near) * 2.0 * tanf(angle / 360 * EIGEN_PI)) / viewport(3);
 }
 
 //unsigned int Renderer::AddBuffer(int infoIndx)

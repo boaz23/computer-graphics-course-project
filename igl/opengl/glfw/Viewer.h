@@ -307,7 +307,7 @@ public:
 
       void ShapeTransformation(int type, float amt, int mode);
 
-      virtual float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y);
+      virtual float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y) = 0;
       //inline void UnPick() { selected_data_index = -1; pickedShapes.clear(); }
 
       int AddShader(const std::string &Vertex_Shader, const std::string &Fragment_shader);
