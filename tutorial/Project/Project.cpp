@@ -227,16 +227,8 @@ void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, c
 	s->Unbind();
 }
 
-
-void Project::WhenRotate()
+void Project::Animate()
 {
-}
-
-void Project::WhenTranslate()
-{
-}
-
-void Project::Animate() {
 	if (isActive)
 	{
 		if (selected_data_index > 0)
@@ -629,22 +621,6 @@ bool Project::AddPickedShapes
 	return isFound;
 }
 
-
-void Project::WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy)
-{
-	Eigen::Vector4d xRotation = preMat.transpose() * Eigen::Vector4d(0, 1, 0, 0);
-	Eigen::Vector4d yRotation = preMat.transpose() * Eigen::Vector4d(1, 0, 0, 0);
-	if (renderer->GetCurrentSection().IsRotationAllowed()) {
-		Transform(GetMovableTransformee(), [&xRotation, &dx, &yRotation, &dy](Movable& movable)
-		{
-			movable.RotateInSystem(xRotation.head(3), dx);
-			movable.RotateInSystem(yRotation.head(3), dy);
-		});
-
-	}
-}
-
-
 igl::opengl::glfw::ViewerDataCreateFunc Project::GetStaticDataCreator(int layer, bool isPicking, bool outline, bool allowTransparent, Eigen::Vector3d color) {
 	return [this, layer, isPicking, outline, allowTransparent, color]()
 	{
@@ -704,6 +680,14 @@ void Project::WhenTranslate(const Eigen::Matrix4d& preMat, float dx, float dy)
 			currentEditedMesh->MoveControlPoint(currentSelectedBezierSegment, controlPointMesh->GetPointNumber(), (rot.transpose() * Eigen::Vector3d(dx, dy, 0)));
 			DrawBezierCurves();
 		}
+	}
+}
+
+void Project::WhenRotate(const Eigen::Matrix4d &preMat, float dx, float dy)
+{
+	if (renderer->GetCurrentSection().IsRotationAllowed())
+	{
+		Viewer::WhenRotate(preMat, dx, dy);
 	}
 }
 

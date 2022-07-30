@@ -44,8 +44,6 @@ public:
 	//	Project(float angle,float relationWH,float zNear, float zFar);
 	void Init();
 	void Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx);
-	void WhenRotate();
-	void WhenTranslate();
 	void Animate() override;
 	void AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
 	void ChangeCameraIndex_ByDelta(int delta);

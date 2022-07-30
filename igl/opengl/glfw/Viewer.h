@@ -338,10 +338,10 @@ public:
           return -1;
       };
 
-      virtual void MoveCamera(std::function<void(Movable&)> transform) {};
+      virtual void MoveCamera(std::function<void(Movable&)> transform) = 0;
 
       virtual void TranslateCamera(double dx, double dy, double dz) = 0;
-      virtual void RotateCamera(double dx, double dy) {};
+      virtual void RotateCamera(double dx, double dy) = 0;
 
       virtual double GetShapeAlpha(int index) = 0;
       virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const = 0;
