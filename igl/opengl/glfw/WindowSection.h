@@ -1,3 +1,6 @@
+#pragma once
+#ifndef WINDOW_SECTION_H
+#define WINDOW_SECTION_H
 #include <vector>
 #include <set>
 #include <igl/opengl/glfw/SectionLayer.h>
@@ -109,3 +112,5 @@ private:
     bool autoAddToSection;
     bool allowRotation;
 };
+
+#endif

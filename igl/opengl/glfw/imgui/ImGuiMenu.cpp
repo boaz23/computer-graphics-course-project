@@ -8,17 +8,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 //#include "ImGuiMenu.h"
 //#include "ImGuiHelpers.h"
+#include "ImGuiMenu.h"
 #include <igl/project.h>
 #include "ImGuiHelpers.h"
 #include "igl/opengl/glfw/renderer.h"
-
-#include "ImGuiMenu.h"
-#include "igl/opengl/glfw/imgui/imgui_impl_glfw.h"
-#include "igl/opengl/glfw/imgui/imgui_impl_opengl3.h"
-
+#include "igl/opengl/glfw/WindowSection.h"
 #include "tutorial/Project/Project.h"
 
+#include "igl/opengl/glfw/imgui/imgui_impl_glfw.h"
+#include "igl/opengl/glfw/imgui/imgui_impl_opengl3.h"
 #include "igl/file_dialog_open.h"
+#include "igl/project.h"
 
 //#include <imgui_fonts_droid_sans.h>
 //#include <GLFW/glfw3.h>
@@ -214,10 +214,22 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       {
           project->ToggleSplitMode();
       }
-      if (project->isInDesignMode && project->renderer->IsPicked() && ImGui::Checkbox("Edit Bezier", &editBezierMode))
+      if (project->isInDesignMode && (project->IsEditBezierMode() || project->CanEnterBezierMode()) && ImGui::Checkbox("Edit Bezier", &editBezierMode))
       {
           project->ToggleEditBezierMode();
       }
+  }
+  if (project && project->IsEditBezierMode() && ImGui::CollapsingHeader("Bezier editor", ImGuiTreeNodeFlags_DefaultOpen))
+  {
+      if (project && ImGui::Button("Add curve", fullWidthVec2))
+      {
+          project->AddBezierSegment();
+      }
+      if (project && project->GetCurrentBezierMesh()->GetSegmentsCount() > 0 && ImGui::Button("Delete last curve", fullWidthVec2))
+      {
+          project->RemoveBezierSegment();
+      }
+
   }
   if (project && ImGui::CollapsingHeader("Cameras", ImGuiTreeNodeFlags_DefaultOpen))
   {
@@ -567,6 +579,91 @@ IGL_INLINE float ImGuiMenu::hidpi_scaling()
   glfwGetWindowContentScale(window, &xscale, &yscale);
   return 0.5 * (xscale + yscale);
 }
+
+IGL_INLINE void ImGuiMenu::draw_labels_window(Renderer* rndr, igl::opengl::glfw::Viewer& viewer, std::vector<WindowSection*>& sections)
+{
+    Project* project = dynamic_cast<Project*>(&viewer);
+    // Text labels
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Always);
+    bool visible = true;
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+    ImGui::Begin("ViewerLabels", &visible,
+        ImGuiWindowFlags_NoTitleBar
+        | ImGuiWindowFlags_NoResize
+        | ImGuiWindowFlags_NoMove
+        | ImGuiWindowFlags_NoScrollbar
+        | ImGuiWindowFlags_NoScrollWithMouse
+        | ImGuiWindowFlags_NoCollapse
+        | ImGuiWindowFlags_NoSavedSettings
+        | ImGuiWindowFlags_NoInputs);
+    for (int i = 0; i < rndr->GetSectionsSize(); i++) {
+        WindowSection& section = rndr->GetSection(i);
+        igl::opengl::Camera& camera = rndr->GetCamera(section.GetCamera());
+        Eigen::Vector4i viewport = section.GetViewportSize();
+        Eigen::Matrix4d Proj = camera.CalcProjection(viewport.z() * 1.0 / viewport.w()).cast<double>();
+        Eigen::Matrix4d View = camera.MakeTransScaled().inverse() * project->MakeTransScaled();
+        if (section.isActive()) {
+            for (const auto& data : project->data_list)
+            {
+                if (project->ShouldRenderViewerData(*data, i, section.GetSceneLayerIndex())) {
+                    draw_labels(*data, section, Proj, View * data->MakeTransScaled());
+                }
+            }
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+}
+
+IGL_INLINE void ImGuiMenu::draw_labels(const igl::opengl::ViewerData& data, WindowSection& section, Eigen::Matrix4d Proj,
+    Eigen::Matrix4d View)
+{
+    if (data.show_custom_labels != 0 && data.labels_positions.rows() > 0)
+    {
+        for (int i = 0; i < data.labels_positions.rows(); ++i)
+        {
+            draw_text(
+                data.labels_positions.row(i),
+                Eigen::Vector3d(0.0, 0.0, 0.0),
+                data.labels_strings[i],
+                section,
+                Proj,
+                View,
+                data.label_color);
+        }
+    }
+}
+
+IGL_INLINE void ImGuiMenu::draw_text(
+    Eigen::Vector3d pos,
+    Eigen::Vector3d normal,
+    const std::string& text,
+    WindowSection& section,
+    Eigen::Matrix4d Proj,
+    Eigen::Matrix4d View,
+    const Eigen::Vector4f color)
+{
+    pos += normal * 0.005f;
+    //igl::project(Eigen::Matrix)    
+    Eigen::Vector3d coord = 
+        igl::project<double>(pos, View, Proj, section.GetViewportSize().cast<double>());
+
+    // Draw text labels slightly bigger than normal text
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(),
+        ImVec2(coord[0] / pixel_ratio_, (section.GetViewportSize().w() - coord[1]) / pixel_ratio_),
+        ImGui::GetColorU32(ImVec4(
+            color(0),
+            color(1),
+            color(2),
+            color(3))),
+        &text[0], &text[0] + text.size());
+}
+
+
 
 } // end namespace
 } // end namespace

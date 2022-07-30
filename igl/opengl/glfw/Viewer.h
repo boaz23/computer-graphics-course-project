@@ -334,11 +334,11 @@ public:
 
       virtual void MoveCamera(std::function<void(Movable&)> transform) {};
 
+      virtual void TranslateCamera(double dx, double dy, double dz) = 0;
       virtual void RotateCamera(double dx, double dy) {};
 
       virtual double GetShapeAlpha(int index) = 0;
-  protected:
-      virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const;
+      virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const = 0;
       Texture* Viewer::AddTexture_Core(const std::string& textureFileName, int dim);
   };
 

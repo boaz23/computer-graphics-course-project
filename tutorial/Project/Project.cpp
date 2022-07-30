@@ -1,5 +1,4 @@
 #include "Project.h"
-#include "AnimationCameraData.h"
 #include "igl/opengl/glfw/renderer.h"
 #include "igl/opengl/ViewerData.h"
 #include "igl/opengl/util.h"
@@ -38,8 +37,11 @@ Project::Project(igl::opengl::CameraData camera) :
 	rightSection{-1},
 	editBezierSection{-1},
 	designCameraIndex{-1},
-	editCameraIndex{-1},
-	shaderIndex_basicColor{-1}
+	editBezierCameraIndex{-1},
+	shaderIndex_basicColor{-1},
+	currentBezierMeshIndex{-1},
+	currentSelectedBezierSegment{-1},
+	bezierCurvePlane{-1}
 {
 	data_list.front() = new ProjectMesh(0, false, false, false);
 	data_list.front()->id = 0;
@@ -67,25 +69,48 @@ void Project::InitRenderer() {
 	// bezier edit camera
 	// TODO aspect ratio not realy matter
 	igl::opengl::CameraData editBezierCameraData(45, 0.75, NEAR, FAR);
-	editCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), editBezierCameraData);
+	editBezierCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), editBezierCameraData);
 	// Default full screen
 	renderer->ActivateSection(fullScreenSection);
-	renderer->GetSection(editBezierSection).SetCamera(editCameraIndex);
+	renderer->GetSection(editBezierSection).SetCamera(editBezierCameraIndex);
 }
 
 void Project::InitBezierSection() {
 	std::pair<int, int> bezierSectionSceneLayerKey = { editBezierSection, renderer->GetSection(editBezierSection).GetSceneLayerIndex() };
 	int bezierPlane = AddShape(Plane, -2, TRIANGLES, shaderIndex_basicColor,
-		{ bezierSectionSceneLayerKey }, GetDataCreator(0, false, false, false, 
+		{ bezierSectionSceneLayerKey }, GetStaticDataCreator(0, false, false, false,
 			Eigen::Vector3d(1.0*0x18/0xff, 1.0*0x17/0xff, 1.0*0x18/0xff)));
 	selected_data_index = bezierPlane;
 	ShapeTransformation(zTranslate, -1.1f, 1);
 	SetShapeStatic(bezierPlane);
+	int bezierAxis = AddShape(Cube, -1, TRIANGLES, shaderIndex_basicColor,
+		{ bezierSectionSceneLayerKey }, GetStaticDataCreator(0, false, false, false,
+			Eigen::Vector3d(1.0 * 0x18 / 0xff, 1.0 * 0x17 / 0xff, 1.0 * 0x18 / 0xff)));
+	data()->show_faces = 0;
+	data()->show_lines = 0;
+	data()->show_overlay = unsigned(~0);
+	data()->add_edges((Eigen::RowVector3d::UnitX() * 60), -(Eigen::RowVector3d::UnitX() * 60), Eigen::RowVector3d(0, 0, 1));
+	data()->add_edges((Eigen::RowVector3d::UnitY() * 60), -(Eigen::RowVector3d::UnitY() * 60), Eigen::RowVector3d(0, 1, 0));
+	bezierCurvePlane = AddShape(Cube, -1, TRIANGLES, shaderIndex_basicColor,
+		{ bezierSectionSceneLayerKey }, GetStaticDataCreator(0, false, false, false,
+			Eigen::Vector3d(1.0 * 0x18 / 0xff, 1.0 * 0x17 / 0xff, 1.0 * 0x18 / 0xff)));
+	data()->show_faces = 0;
+	data()->show_lines = 0;
+	data()->show_overlay = unsigned(~0);
 	for (int i = 0; i < 4; i++) {
-		controlPointsMeshIndexes[i] = AddShapeFromFile("./data/cube.obj", -1, TRIANGLES, shaderIndex_basicColor, { bezierSectionSceneLayerKey },
-			GetDataCreator(0, true, false, false, Eigen::Vector3d(1.0*0xcc/0xff, 0.0, 0.0)));
+		controlPointsMeshIndexes[i] = AddShapeFromFile(
+			"./data/cube.obj",
+			-1, TRIANGLES, shaderIndex_basicColor,
+			{ bezierSectionSceneLayerKey },
+			[i]() {
+				return new BezierControlPointMesh(i);
+			}
+		);
 		ShapeTransformation(xTranslate, -1.5f + (float)i, 1);
 		ShapeTransformation(scaleAll, 0.05f, 1);
+		data()->show_custom_labels = unsigned(~0);
+		data()->add_label(Eigen::RowVector3d(0, 2, 0.5), "P" + std::to_string(i));
+		data()->label_color = Eigen::RowVector4f(1, 0, 0, 1);
 	}
 }
 
@@ -129,13 +154,13 @@ void Project::InitResources() {
 void Project::InitScene() {
 	std::vector<std::pair<int, int>>& sceneLayers = renderer->GetSceneLayersIndexes();
 	int sceneCube = AddShape(Cube, -2, TRIANGLES, shaderIndex_cubemap, sceneLayers, 
-		GetDataCreator(0, false, false, false));
+		GetStaticDataCreator(0, false, false, false));
 	int scissorBox = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex, renderer->GetScissorsTestLayersIndexes(), 
-		GetDataCreator(0, false, false, false));
+		GetStaticDataCreator(0, false, false, false));
 	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers, 
-		GetDataCreator(currentEditingLayer, true, true, true));
+		GetAnimatedDataCreator(currentEditingLayer, true, true, true));
 	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers, 
-		GetDataCreator(currentEditingLayer, true, true, true));
+		GetAnimatedDataCreator(currentEditingLayer, true, true, true));
 	//int camera = AddShapeFromFile("./data/film_camera 2.obj", -1, TRIANGLES, shaderIndex_basic, sceneLayers);
 
 	SetShapeMaterial(sceneCube, materialIndex_cube);
@@ -192,11 +217,11 @@ void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, c
 	}
 	else if (shaderIndx == shaderIndex_basic)
 	{
-		s->SetUniform1f("Transperancy", mesh.GetAlpha());
+		s->SetUniform1f("Transperancy", (float)mesh.GetAlpha());
 	}
 	else if (shaderIndx == shaderIndex_basicColor)
 	{
-		s->SetUniform1f("Transperancy", mesh.GetAlpha());
+		s->SetUniform1f("Transperancy", (float)mesh.GetAlpha());
 		s->SetUniform3f("myColor", mesh.GetColor().cast<float>());
 	}
 	s->Unbind();
@@ -234,7 +259,7 @@ int Project::AddShapeFromMenu(const std::string& filePath)
 	}
 
 	int shapeIndex = AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, renderer->GetSceneLayersIndexes(),
-		GetDataCreator(currentEditingLayer, true, true, true));
+		GetAnimatedDataCreator(currentEditingLayer, true, true, true));
 	GetViewerDataAt(shapeIndex).SetMaterial(materialIndex_box0);
 	return shapeIndex;
 }
@@ -250,7 +275,7 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 	case CameraKind::Animation:
 		int shapeIndex = AddShapeFromFile
 		(
-			"./data/film_camera.obj", // TODO: find a better mesh
+			"./data/film_camera.obj",
 			-1,
 			TRIANGLES,
 			shaderIndex_basicColor,
@@ -289,7 +314,7 @@ void Project::ChangeCameraIndex_ByDelta(int delta)
 	WindowSection &section = renderer->GetSection(currentSectionIndex);
 	int currentCameraIndex = section.GetCamera();
 	int currentMesh = GetMeshIndex(currentCameraIndex);
-	int tempCameraIndex = (currentCameraIndex+delta)%(renderer->CamerasCount() + 1);
+	int tempCameraIndex = (currentCameraIndex+delta)%(renderer->CamerasCount());
 	int nextCameraIndex = -1;
 	while (nextCameraIndex == -1) {
 		if (tempCameraIndex == 0 || camerasToMesh.find(tempCameraIndex) != camerasToMesh.end()) {
@@ -422,11 +447,15 @@ float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewpor
 			continue;
 		}
 		Eigen::Matrix4d meshView = sceneView * mesh.MakeTransScaled();
+		Eigen::Affine3d scaleMat = Eigen::Affine3d::Identity();
+		double scaleFactor = mesh.GetPickingScaleFactor();
+		scaleMat.scale(Eigen::Vector3d(scaleFactor, scaleFactor, scaleFactor));
+		Eigen::Matrix4d meshViewScaled = meshView * scaleMat.matrix();
 		Eigen::Vector3d sourcePointScene, dirToScene;
-		ProjectScreenCoordToScene(x, y, viewportf, meshView.inverse(), sourcePointScene, dirToScene);
+		ProjectScreenCoordToScene(x, y, viewportf, meshViewScaled.inverse(), sourcePointScene, dirToScene);
 		Eigen::Vector3d closestIntersectionPoint;
 		int closestShapeFaceIndex;
-		if (GetClosestIntersectingFace(mesh, meshView, sourcePointScene, dirToScene, closestIntersectionPoint, closestShapeFaceIndex)) {
+		if (GetClosestIntersectingFace(mesh, meshViewScaled, sourcePointScene, dirToScene, closestIntersectionPoint, closestShapeFaceIndex)) {
 			Eigen::Vector4d transformed = meshView * closestIntersectionPoint.homogeneous();
 			if (closestShapeIndex == -1 || transformed(2) < closestFaceDist) {
 				closestShapeIndex = i;
@@ -442,7 +471,50 @@ float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewpor
 			data_list[selected_data_index]->AddSectionLayers(stencilLayers);
 		}
 	}
+	else if (sectionIndex == editBezierSection) {
+		TryPickSegment(PV, viewportDims, x, y);
+	}
 	return (float)closestFaceDist;
+}
+
+double CalcDistanceBetweenPointAndLine(Eigen::Vector2d pointA, Eigen::Vector2d pointB, Eigen::Vector2d P) {
+	double aside = (P - pointA).dot(pointB - pointA);
+	if (aside < 0.0)
+		return (P - pointA).norm();
+	double bside = (P - pointB).dot(pointA - pointB);
+	if (bside < 0.0) 
+		return (P - pointB).norm();
+	Eigen::Vector2d pointOnLine = (bside * pointA + aside * pointB) / pow((pointA - pointB).norm(), 2.0);
+	return (P - pointOnLine).norm();
+}
+
+void Project::TryPickSegment(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int x, int y) {
+	double closeThreshold = 0.5;
+	float viewportf[] = { (float)viewportDims(0), (float)viewportDims(1), (float)viewportDims(2), (float)viewportDims(3) };
+	Eigen::Matrix4d sceneView = PV * MakeTransScaled();
+	ProjectMesh& mesh = *GetProjectMeshByIndex(bezierCurvePlane);
+	Eigen::Matrix4d meshView = sceneView * mesh.MakeTransScaled();
+	Eigen::Vector3d sourcePointScene, dirToScene;
+	ProjectScreenCoordToScene(x, y, viewportf, meshView.inverse(), sourcePointScene, dirToScene);
+	double distanceToZ = -sourcePointScene(2);
+	double factor = distanceToZ/dirToScene(2);
+	Eigen::Vector2d intersectionPoint = (sourcePointScene + factor * dirToScene).head(2);
+	int foundLineIndex = -1;
+	for (int i = 0; i < mesh.lines.rows(); i++) {
+		Eigen::Vector2d pointA = mesh.lines.row(i).head(2);
+		Eigen::Vector2d pointB = mesh.lines.row(i).block(0, 3, 1, 2).head(2);
+		double dist = CalcDistanceBetweenPointAndLine(pointA, pointB, intersectionPoint);
+		if (abs(dist) < closeThreshold) {
+			foundLineIndex = i;
+			break;
+		}
+	}
+	currentSelectedBezierSegment = foundLineIndex == -1 ? -1 : GetCurrentBezierMesh()->GetCachedMap().row(foundLineIndex)(0);
+	SetControlPointsPosition();
+	DrawBezierCurves();
+	//float denom = Eigen::Vector3d::UnitZ().dot(dirToScene);
+	//float t = (-sourcePointScene).dot(Eigen::Vector3d::UnitZ()) / denom;
+	//Eigen::Vector3d intersectionPoint = sourcePointScene + t * dirToScene;
 }
 
 void Project::ToggleSplitMode() {
@@ -450,6 +522,7 @@ void Project::ToggleSplitMode() {
 		renderer->DeactivateSection(leftSection);
 		renderer->DeactivateSection(editBezierMode ? editBezierSection : rightSection);
 		renderer->ActivateSection(fullScreenSection);
+		editBezierMode = false;
 	}
 	else {
 		renderer->DeactivateSection(fullScreenSection);
@@ -460,11 +533,54 @@ void Project::ToggleSplitMode() {
 }
 
 void Project::ToggleEditBezierMode() {
+	if (editBezierMode) {
+		ExitBezierMode();
+	}
+	else if (!EnterBezierMode()) {
+		return;
+	}
 	if (splitMode) {
 		renderer->DeactivateSection(editBezierMode ? editBezierSection : rightSection);
 		renderer->ActivateSection(editBezierMode ? rightSection : editBezierSection);
+		editBezierMode = !editBezierMode;
 	}
-	editBezierMode = !editBezierMode;
+	else {
+		editBezierMode = true;
+		ToggleSplitMode();
+	}
+	if (editBezierMode) {
+		renderer->UpdateSection(editBezierSection);
+	}
+}
+
+bool Project::EnterBezierMode() {
+	auto a = std::find_if(pShapes.begin(), pShapes.end(), [this](int arg) {
+		return GetProjectMeshByIndex(arg)->AllowAnimations();
+	});
+	if (a != pShapes.end()) {
+		currentBezierMeshIndex = *a;
+		currentSelectedBezierSegment = -1;
+		SetControlPointsPosition();
+		DrawBezierCurves();
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+void Project::ExitBezierMode() {
+	currentBezierMeshIndex = -1;
+	currentSelectedBezierSegment = -1;
+	data_list[bezierCurvePlane]->clear_edges();
+	HideControlPoints();
+}
+
+bool Project::CanEnterBezierMode() {
+	auto a = std::find_if(pShapes.begin(), pShapes.end(), [this](int arg) {
+		return GetProjectMeshByIndex(arg)->AllowAnimations();
+	});
+	return a != pShapes.end();
 }
 
 ProjectMesh* Project::GetProjectMeshByIndex(int index) {
@@ -483,7 +599,7 @@ bool Project::AddPickedShapes
 {
 	if (renderer->GetCurrentSectionIndex() == editBezierSection) {
 		// Multi picking not allowed in bezier edit
-		return -1.0;
+		return false;
 	}
 	//not correct when the shape is scaled
 	Eigen::Matrix4d MVP = PV * MakeTransd();
@@ -510,7 +626,7 @@ bool Project::AddPickedShapes
 			isFound = true;
 
 			double minDistance = std::numeric_limits<double>::infinity();
-			for (size_t vi = 0; vi < mesh.V.rows(); ++vi)
+			for (size_t vi = 0; (int)vi < mesh.V.rows(); ++vi)
 			{
 				Eigen::Vector3d vertex = mesh.V.row(vi).head<3>();
 				Eigen::Vector4d transformed = posMatrix * vertex.homogeneous();
@@ -542,12 +658,19 @@ void Project::WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy)
 }
 
 
-igl::opengl::glfw::ViewerDataCreateFunc Project::GetDataCreator(int layer, bool isPicking, bool outline, bool allowTransparent, Eigen::Vector3d color) {
+igl::opengl::glfw::ViewerDataCreateFunc Project::GetStaticDataCreator(int layer, bool isPicking, bool outline, bool allowTransparent, Eigen::Vector3d color) {
 	return [this, layer, isPicking, outline, allowTransparent, color]()
 	{
 		return new ProjectMesh(layer, isPicking, outline, allowTransparent, color);
 	};
 }
+igl::opengl::glfw::ViewerDataCreateFunc Project::GetAnimatedDataCreator(int layer, bool isPicking, bool outline, bool allowTransparent, Eigen::Vector3d color) {
+	return [this, layer, isPicking, outline, allowTransparent, color]()
+	{
+		return new AnimatedMesh(layer, isPicking, outline, allowTransparent, color);
+	};
+}
+
 void Project::RotateCamera(double dx, double dy) {
 	if (renderer->GetCurrentSection().IsRotationAllowed()) {
 		MoveCamera([&dx, &dy](Movable& movable)
@@ -555,5 +678,84 @@ void Project::RotateCamera(double dx, double dy) {
 			movable.RotateInSystem(Eigen::Vector3d(0, 1, 0), dx);
 			movable.RotateInSystem(Eigen::Vector3d(1, 0, 0), dy);
 		});
+	}
+}
+
+void Project::TranslateCamera(double dx, double dy, double dz) {
+	WindowSection& section = renderer->GetCurrentSection();
+	int cameraIndex = section.GetCamera();
+	if (cameraIndex == editBezierCameraIndex) {
+		igl::opengl::Camera& camera = renderer->GetCamera(cameraIndex);
+		double currentTranslation = camera.MakeTransScaled().col(3).z();
+		dz = std::max(1 - currentTranslation, dz);
+	}
+	MoveCamera([dx, dy, dz](Movable& movable)
+	{
+		movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(dx, dy, dz));
+	});
+}
+
+void Project::WhenScroll(const Eigen::Matrix4d& preMat, float dy) {
+	if (renderer->GetCurrentSectionIndex() == editBezierSection) {
+		return;
+	}
+	igl::opengl::glfw::Viewer::WhenScroll(preMat, dy);
+}
+
+void Project::WhenTranslate(const Eigen::Matrix4d& preMat, float dx, float dy)
+{
+	Eigen::Matrix3d rot = preMat.block<3, 3>(0, 0);
+	Transform(GetMovableTransformee(), [&rot, &dx, &dy](Movable& movable)
+	{
+		movable.TranslateInSystem(rot, Eigen::Vector3d(dx, 0, 0));
+		movable.TranslateInSystem(rot, Eigen::Vector3d(0, dy, 0));
+	});
+	auto controlPointMesh = dynamic_cast<BezierControlPointMesh*>(const_cast<igl::opengl::ViewerData*>(data()));
+	if (controlPointMesh != NULL) {
+		AnimatedMesh* currentEditedMesh = GetCurrentBezierMesh();
+		if (currentEditedMesh != NULL) {
+			currentEditedMesh->MoveControlPoint(currentSelectedBezierSegment, controlPointMesh->GetPointNumber(), (rot.transpose() * Eigen::Vector3d(dx, dy, 0)));
+			DrawBezierCurves();
+		}
+	}
+}
+
+void Project::DrawBezierCurves() {
+	Eigen::MatrixX3d P;
+	Eigen::MatrixX2i E;
+	Eigen::VectorXi ESMAP;
+	AnimatedMesh* currentEditedMesh = GetCurrentBezierMesh();
+	currentEditedMesh->GetEdges(E, P, ESMAP);
+	Eigen::MatrixXd C;
+	C.resize(E.rows(), 3);
+	for (int i = 0; i < E.rows(); i++) {
+		if (ESMAP(i) == currentSelectedBezierSegment) {
+			C.row(i) = BEZIER_SELECTED_CURVE_COLOR;
+		}
+		else {
+			C.row(i) = BEZIER_CURVE_COLOR;
+		}
+	}
+	ProjectMesh& bezierCurvePlaneMesh = *GetProjectMeshByIndex(bezierCurvePlane);
+	bezierCurvePlaneMesh.set_edges(P, E, C);
+}
+
+void Project::HideControlPoints() {
+	for (int i = 0; i < 4; i++) {
+		data_list[controlPointsMeshIndexes[i]]->Hide();
+	}
+}
+
+void Project::SetControlPointsPosition() {
+	if (currentBezierMeshIndex == -1 || currentSelectedBezierSegment == -1) {
+		HideControlPoints();
+		return;
+	}
+	AnimatedMesh* currentEditedMesh = GetCurrentBezierMesh();
+	for (int i = 0; i < 4; i++) {
+		BezierControlPointMesh* controlPointMesh = dynamic_cast<BezierControlPointMesh*>(const_cast<igl::opengl::ViewerData*>
+			(data_list[controlPointsMeshIndexes[i]]));
+		controlPointMesh->SetPosition(currentEditedMesh->GetControlPoint(currentSelectedBezierSegment, controlPointMesh->GetPointNumber()));
+		controlPointMesh->UnHide();
 	}
 }

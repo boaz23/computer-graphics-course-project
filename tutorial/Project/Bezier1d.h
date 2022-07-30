@@ -19,8 +19,6 @@ public:
     static t_t dt;
 };
 
-t_t Bezier::dt = 1.0 / 32.0;
-
 // Each segment is implemented with a matrix.
 // Each row is a control point using homogeneous coordinates.
 template<typename TScalar, t_dim PDim, t_dim PFree> class Bezier1d
@@ -45,6 +43,8 @@ public:
 
     using P_Matrix = Eigen::Matrix<t_scalar, Eigen::Dynamic, PDim>;
     using E_Matrix = Eigen::Matrix<int, Eigen::Dynamic, 2>;
+    // mapping each edge to respective segment
+    using ESMAP_Vector = Eigen::Matrix<int, Eigen::Dynamic, 1>;
 
     // TOOD: Initialize M and the default segment somehow
 protected:
@@ -74,7 +74,7 @@ public:
         TranslateControlPoint_C0_Core(segment, index, translationH);
     }
 
-    void TranslateControlPoint_C1(t_index segment, int index, const ph_vector &translation)
+    void TranslateControlPoint_C1(t_index segment, int index, const p_vector &translation)
     {
         ph_vector translationH{};
         translationH << translation, 0;
@@ -100,6 +100,11 @@ public:
         t_index i = segments.size();
         segments.push_back(P);
         return i;
+    }
+
+    void RemoveLastSegment()
+    {
+        segments.pop_back();
     }
 
     p_vector GetPoint(t_index segment, t_t t)
@@ -132,9 +137,9 @@ public:
         return true;
     }
 
-    void GetEdges(P_Matrix &P, E_Matrix &E)
+    void GetEdges(P_Matrix &P, E_Matrix &E, ESMAP_Vector &ESMAP)
     {
-        ResizeEdgesMatrices(P, E);
+        ResizeEdgesMatrices(P, E, ESMAP);
 
         t_t t = 0.0;
         t_index segment = 0;
@@ -146,12 +151,14 @@ public:
         {
             Eigen::Index next_i = i + 1;
             P.row(next_i) << p_current.transpose();
-            E.row(i) << i, next_i;
+            E.row(i) << (int)i, (int)next_i;
+            ESMAP.row(i) << (int)segment;
             p_prev = p_current;
             i = next_i;
         }
     }
 
+    int SegmentsCount() { return (int)segments.size(); }
 private:
     void TranslateControlPoint_C0_Core(t_index segment, int index, const ph_vector &translation)
     {
@@ -192,7 +199,7 @@ private:
         }
         else if (index == lastControlPointIndex - 1)
         {
-            if (segment < segments.size())
+            if (segment < segments.size() - 1)
             {
                 TranslateControlPoint_C0_Core(segment + 1, 1, -translation);
             }
@@ -218,13 +225,14 @@ private:
         return T;
     }
 
-    void ResizeEdgesMatrices(P_Matrix &P, E_Matrix &E)
+    void ResizeEdgesMatrices(P_Matrix &P, E_Matrix &E, ESMAP_Vector& ESMAP)
     {
         auto nPointsPerSegment = static_cast<Eigen::Index>(std::ceil(1.0 / Bezier::dt)) + 1;
         size_t segmentsCount = segments.size();
         Eigen::Index nPoints = nPointsPerSegment*segmentsCount - (segmentsCount-1);
         P.resize(nPoints, Eigen::NoChange);
         E.resize(nPoints - 1, Eigen::NoChange);
+        ESMAP.resize(nPoints - 1, Eigen::NoChange);
     }
 };
 
@@ -234,18 +242,4 @@ public:
     Bezier1d_D_3_2() : Bezier1d<double, 3, 2>()
     {}
 };
-
-Bezier1d<t_t, 3, 2>::phc_matrix Bezier1d<t_t, 3, 2>::M = (phc_matrix{} <<
-    -1, 3, -3, 1,
-    3, -6, 3, 0,
-    -3, 3, 0, 0,
-    1, 0, 0, 0
-    ).finished();
-Bezier1d<t_t, 3, 2>::phc_matrix Bezier1d<t_t, 3, 2>::DefaultSegment = (phc_matrix{} <<
-    -1, 0, 0, 1,
-    -0.5, 0.75, 0, 1,
-    0.5, 0.75, 0, 1,
-    1, 0, 0, 1
-    ).finished();
-
 #endif

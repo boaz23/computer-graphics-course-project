@@ -649,7 +649,7 @@ IGL_INLINE bool
       if(type == Axis) {
           data()->show_faces = 0;
           data()->show_lines = 0;
-          data()->show_overlay = 0xFF;
+          data()->show_overlay = unsigned(~0);
           data()->add_edges((Eigen::RowVector3d::UnitX()*4),-(Eigen::RowVector3d::UnitX()*4),Eigen::RowVector3d(1,0,0));
           data()->add_edges((Eigen::RowVector3d::UnitY()*4),-(Eigen::RowVector3d::UnitY()*4),Eigen::RowVector3d(0,1,0));
           data()->add_edges((Eigen::RowVector3d::UnitZ()*4),-(Eigen::RowVector3d::UnitZ()*4),Eigen::RowVector3d(0,0,1));
@@ -741,10 +741,10 @@ IGL_INLINE bool
             }
             if (pShapes.size() == 0)
             {
-                MoveCamera([xrel, yrel](Movable& movable)
-                {
-                    movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(-xrel * 0.001, yrel * 0.001, 0));
-                });
+                double cameraFar = camera.data.zFar, cameraNear = camera.data.zNear;
+                double cameraDepth = cameraFar + 0.5f * (cameraNear - cameraFar);
+                double movCoeff = camera.CalcMoveCoeff(cameraDepth, viewpoertSize);
+                TranslateCamera(-xrel * movCoeff * 0.1, yrel * movCoeff * 0.1, 0);
             }
         }
         else
@@ -777,10 +777,7 @@ IGL_INLINE bool
                 }
                 if (pShapes.size() == 0)
                 {
-                    MoveCamera([dy](Movable& movable)
-                    {
-                        movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(0.0, 0.0, dy));
-                    });
+                    TranslateCamera(0.0, 0.0, dy);
                 }
             }
         }

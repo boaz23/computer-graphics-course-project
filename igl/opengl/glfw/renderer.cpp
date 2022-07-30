@@ -528,6 +528,7 @@ IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, igl::opengl::Ca
         {
             // Draw parent menu content
             auto temp = Eigen::Vector4i(0,0,0,0); // set imgui to min size and top left corner
+            menu->draw_labels_window(this, *scn, GetSections());
             menu->draw_viewer_menu(this, *scn,cameras, cameraData, temp);
         };
     }

@@ -1,14 +1,14 @@
 #pragma once
 #ifndef PROJECT_ANIMATION_CAMERA_H
 #define PROJECT_ANIMATION_CAMERA_H
-#include "./ProjectMesh.h"
+#include "./AnimatedMesh.h"
 
 #define CAMERA_COLOR Eigen::Vector3d(0.9375, 0.9375, 0.9375)
-class AnimationCameraData : public ProjectMesh {
+class AnimationCameraData : public AnimatedMesh {
 public:
 	AnimationCameraData(int layer, int cameraIndex)
 		: 
-		ProjectMesh(layer, true, true, false, CAMERA_COLOR), 
+		AnimatedMesh(layer, true, true, false, CAMERA_COLOR), 
 		cameraIndex{cameraIndex} {}
 
 	int cameraIndex;

@@ -116,73 +116,35 @@
 
 			// TODO: transformation in camera plane
 			case GLFW_KEY_UP:
-				if (allowRotation) {
-					scn->MoveCamera([](Movable& movable)
-					{
-						movable.MyRotate(Eigen::Vector3d(1, 0, 0), 0.05f);
-					});
-				}
+				scn->RotateCamera(0, 0.05);
 				break;
 			case GLFW_KEY_DOWN:
-				if (allowRotation) {
-					scn->MoveCamera([](Movable& movable)
-					{
-						movable.MyRotate(Eigen::Vector3d(1, 0, 0), -0.05f);
-					});
-				}
+				scn->RotateCamera(0, -0.05);
 				break;
 			case GLFW_KEY_LEFT:
-				if (allowRotation) {
-					scn->MoveCamera([](Movable& movable)
-					{
-						movable.MyRotate(Eigen::Vector3d(0, 1, 0), 0.05f);
-					});
-				}
+				scn->RotateCamera(0.05, 0);
 				break;
 			case GLFW_KEY_RIGHT:
-				if (allowRotation) {
-					scn->MoveCamera([](Movable& movable)
-					{
-						movable.MyRotate(Eigen::Vector3d(0, 1, 0), -0.05f);
-					});
-				}
+				scn->RotateCamera(-0.05, 0);
 				break;
 
 			case GLFW_KEY_Q:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0, 0.25f, 0), 1);
-				});
+				scn->TranslateCamera(0, 0.25, 0);
 				break;
 			case GLFW_KEY_E:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0, -0.25f, 0), 1);
-				});
+				scn->TranslateCamera(0, -0.25, 0);
 				break;
 			case GLFW_KEY_A:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(-0.25f, 0, 0), 1);
-				});
+				scn->TranslateCamera(-0.25, 0, 0);
 				break;
 			case GLFW_KEY_D:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0.25f, 0, 0), 1);
-				});
+				scn->TranslateCamera(0.25, 0, 0);
 				break;
 			case GLFW_KEY_S:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0, 0, 0.25f), 1);
-				});
+				scn->TranslateCamera(0, 0, 0.25);
 				break;
 			case GLFW_KEY_W:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0, 0, -0.25f), 1);
-				});
+				scn->TranslateCamera(0, 0, -0.25);
 				break;
 
 			case GLFW_KEY_O:

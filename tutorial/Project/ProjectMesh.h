@@ -13,7 +13,7 @@ public:
 		pickable{isPickable},
 		outline{outline},
 		color{color},
-		allowTransparent{allowTransparent},
+		allowTransparent{allowTransparent},	
 		alpha{1.0}
 	{}
 
@@ -26,6 +26,9 @@ public:
 	inline double GetAlpha() { return allowTransparent ? alpha : 1.0; }
 	inline Eigen::Vector3d GetColor() { return color; }
 	inline bool IsTransparentAllowed() { return allowTransparent; }
+
+	virtual double GetPickingScaleFactor() { return 1; }
+	virtual bool AllowAnimations() { return false; }
 
 	bool pickable;
 	bool outline;
