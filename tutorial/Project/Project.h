@@ -87,7 +87,7 @@ public:
 
 	int GetCurrentBezierMeshIndex() { return currentBezierMeshIndex; }
 	int GetCurrentSelectedBezierSegment() { return currentSelectedBezierSegment; }
-
+	int GetBezierSectionIndex() { return editBezierSection; }
 	void SetCurrentBezierMeshIndex(int index) { currentBezierMeshIndex = index; }
 	void SetCurrentSelectedBezierSegment(int segment) { currentSelectedBezierSegment = segment; }
 	void DrawBezierCurves();

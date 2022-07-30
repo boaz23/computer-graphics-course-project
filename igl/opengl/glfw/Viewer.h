@@ -184,7 +184,7 @@ namespace glfw
     // Returns 0 if not found
     IGL_INLINE size_t mesh_index(const int id) const;
 
-	Eigen::Matrix4d CalcParentsTrans(int indx);
+	Eigen::Matrix4d CalcParentsTrans(int indx) const;
 	inline bool SetAnimation() { return isActive = !isActive; }
     inline  bool  IsActive() const { return isActive; }
     inline void Activate() { isActive = true; }
@@ -251,8 +251,14 @@ public:
 
       Eigen::Matrix4d GetPriviousTrans(const Eigen::Matrix4d &View, unsigned int index) const;
 
+      IGL_INLINE Eigen::Matrix4d CalculatePosMatrix(int shapeIndex, const Eigen::Matrix4d &MVP) const;
+
       virtual bool AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right,
-          int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers, std::vector<double> &distances) = 0;
+          int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers, std::vector<double> &depths) = 0;
+
+      double CalculateDepthOfMesh(const ViewerData &mesh, const Eigen::Matrix4d &posMatrix) const;
+      void AppendDepthsOfPicked(std::vector<double> &depths, const Eigen::Matrix4d &MVP) const;
+
       template<typename T> bool AllPickedShapesSameValue(std::function<T(const ViewerData&)> valueFunc) const
       {
           if (pShapes.size() <= 1)

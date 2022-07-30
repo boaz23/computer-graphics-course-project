@@ -12,7 +12,7 @@
 #endif
 
 
-Renderer::Renderer(igl::opengl::CameraData cameraData) : depths{}
+Renderer::Renderer(igl::opengl::CameraData cameraData) : depths{}, manyPickCameraTransformation{ Eigen::Matrix4d::Identity() }
 {
 
     callback_init = nullptr;
@@ -292,12 +292,35 @@ bool Renderer::TrySinglePicking(int x, int y)
 {
     // Added: try to single picking when in many selected mode if the click is singular
     double dist = sqrt(pow(xWhenPress - x, 2) + pow(yWhenPress - y, 2));
-    if (IsMany() && dist <= 3) {
+    if (IsMany() && dist <= 3.0)
+    {
         return Picking(x, y);
     }
     return false;
 }
 
+void Renderer::RecalculateDepths(const WindowSection &section, const Eigen::Matrix4d &ViewInv)
+{
+    Eigen::Vector4i viewportSize = section.GetViewportSize();
+    igl::opengl::Camera &currentCamera = *cameras[section.GetCamera()];
+    Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
+    Eigen::Matrix4d View = ViewInv.inverse();
+    Eigen::Matrix4d MVP = Proj * View * scn->MakeTransd();
+    depths.clear();
+    scn->AppendDepthsOfPicked(depths, MVP);
+}
+
+void Renderer::RecalculateDepths()
+{
+    WindowSection &section = *windowSections[currentSection];
+    const igl::opengl::Camera &currentCamera = *cameras[section.GetCamera()];
+    auto ViewInv = currentCamera.MakeTransScaled();
+    if (ViewInv != manyPickCameraTransformation)
+    {
+        RecalculateDepths(section, ViewInv);
+        manyPickCameraTransformation = ViewInv;
+    }
+}
 
 //void Renderer::OutLine()
 //{
@@ -318,7 +341,8 @@ void Renderer::PickMany(int x, int y)
     int yMax = viewportSize.w() - std::min(localPressY, localReleaseY);
     UnPick();
     Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
-    Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
+    Eigen::Matrix4d ViewInv = currentCamera.MakeTransScaled();
+    Eigen::Matrix4d View = ViewInv.inverse();
     bool hasAny = scn->AddPickedShapes
     (
         Proj*View,
@@ -331,6 +355,7 @@ void Renderer::PickMany(int x, int y)
     {
         isMany = true;
         isPicked = true;
+        manyPickCameraTransformation = ViewInv;
     }
 }
 

@@ -75,9 +75,9 @@ public:
     inline DrawInfo& GetDrawInfo(int layerIndex, int index) { return sectionLayers[layerIndex]->GetDrawInfo(index); }
 
     inline void SetCamera(int cameraIndex) { sectionCameraIndex = cameraIndex; }
-    inline int GetCamera() { return sectionCameraIndex; }
+    inline int GetCamera() const { return sectionCameraIndex; }
 
-    inline Eigen::Vector4i GetViewportSize() { return viewportDims; }
+    inline Eigen::Vector4i GetViewportSize() const { return viewportDims; }
     inline void SetViewportSize(Eigen::Vector4i newSize) { viewportDims = newSize; }
 
     inline int GetSceneLayerIndex() { return sceneLayerIndex; }
@@ -100,7 +100,7 @@ public:
     inline bool isActive() { return active; }
 
     inline bool IsAutoAddSection() { return autoAddToSection; }
-    inline bool IsRotationAllowed() { return allowRotation; }
+    inline bool IsRotationAllowed() const { return allowRotation; }
 private:
     int sectionCameraIndex;
     std::vector<SectionLayer*> sectionLayers;
