@@ -11,6 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "igl/opengl/glfw/Viewer.h"
 class Renderer;
+class Project;
 //#include <igl/opengl/glfw/ViewerPlugin.h>
 
 //#include "igl/opengl/ViewerCore.h"
@@ -20,6 +21,7 @@ class Renderer;
 #include <igl/opengl/Camera.h>
 #include "../DrawInfo.h"
 #include <memory>
+#include <igl/opengl/glfw/WindowSection.h>
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -100,16 +102,19 @@ public:
   std::function<void(void)> callback_draw_viewer_menu;
   std::function<void(void)> callback_draw_custom_window;
 
-//  IGL_INLINE void draw_labels_window(igl::opengl::glfw::Viewer* viewer, const igl::opengl::ViewerCore* core);
+  IGL_INLINE void draw_labels_window(Renderer* rndr, igl::opengl::glfw::Viewer& viewer, std::vector<WindowSection*>& sections);
 
-//  IGL_INLINE void draw_labels(const igl::opengl::ViewerData &data, const igl::opengl::ViewerCore* core);
+  IGL_INLINE void draw_labels(const igl::opengl::ViewerData &data, WindowSection& section, Eigen::Matrix4d Proj,
+      Eigen::Matrix4d View);
 
-//  IGL_INLINE void draw_text(
-//    Eigen::Vector3d pos,
-//    Eigen::Vector3d normal,
-//    const std::string &text,
-//    const igl::opengl::ViewerCore* core,
-//    const Eigen::Vector4f color = Eigen::Vector4f(0, 0, 0.04, 1)); // old default color
+  IGL_INLINE void draw_text(
+    Eigen::Vector3d pos,
+    Eigen::Vector3d normal,
+    const std::string &text,
+    WindowSection& section,
+      Eigen::Matrix4d Proj,
+      Eigen::Matrix4d View,
+    const Eigen::Vector4f color = Eigen::Vector4f(0, 0, 0.04f, 1)); // old default color
 
   IGL_INLINE float pixel_ratio();
 

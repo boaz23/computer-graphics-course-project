@@ -23,8 +23,8 @@ namespace igl {
             IGL_INLINE Camera();
             IGL_INLINE Camera(CameraData data);
 
-            IGL_INLINE Eigen::Matrix4f GetViewProjection() const {
-                return _projection;
+            IGL_INLINE Eigen::Matrix4f GetViewProjection(float displayRatio) const {
+                return CalcProjection(displayRatio);
             }
 
             IGL_INLINE float GetAngle() const {
@@ -44,8 +44,9 @@ namespace igl {
             }
 
             IGL_INLINE void SetProjection(float fov, float relationWH);
+            IGL_INLINE Eigen::Matrix4f CalcProjection(float relationWH) const;
 
-            IGL_INLINE float CalcMoveCoeff(float depth, int width) const;
+            IGL_INLINE float CalcMoveCoeff(float depth, int size) const;
 
             Eigen::Matrix4f _projection;
             CameraData data;

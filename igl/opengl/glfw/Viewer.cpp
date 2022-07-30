@@ -74,8 +74,6 @@ namespace glfw
       currentObjectLayer{1},
       isEditingObjectLayer{false}
   {
-    data_list.front() = new ViewerData();
-    data_list.front()->id = 0;
     staticScene = 0;
     overlay_point_shader = nullptr;
     overlay_shader = nullptr;
@@ -88,8 +86,6 @@ namespace glfw
     SetShader_overlay("shaders/overlay");
     SetShader_point_overlay("shaders/overlay_points");
 
-    // Per face
-    data()->set_face_based(false);
 
     
 //#ifndef IGL_VIEWER_VIEWER_QUIET
@@ -218,7 +214,7 @@ IGL_INLINE bool
                   //std::cout << "faces normals:  " << corner_normals.row(fNormIndices(k, 0)) << std::endl;
               }
               
-              std::cout << "faces normals: \n" << N << std::endl;
+              //std::cout << "faces normals: \n" << N << std::endl;
              
               normal_read = true;
           }
@@ -422,7 +418,7 @@ IGL_INLINE bool
     return 0;
   }
 
-  Eigen::Matrix4d Viewer::CalcParentsTrans(int indx) 
+  Eigen::Matrix4d Viewer::CalcParentsTrans(int indx) const
   {
 	  Eigen::Matrix4d prevTrans = Eigen::Matrix4d::Identity();
 
@@ -443,9 +439,7 @@ IGL_INLINE bool
         unsigned int flgs, unsigned int property_id
     )
     {
-
         Eigen::Matrix4f Normal;
-
         if (!staticScene)
             Normal = MakeTransScale();
         else
@@ -456,7 +450,7 @@ IGL_INLINE bool
         for (size_t i = 0; i < data_list.size(); ++i)
         {
             ViewerData *shape = data_list[i];
-            if (shape->alpha == 1.0f)
+            if (GetShapeAlpha(i) == 1.0f)
             {
                 opaqueDataIndices.push_back(i);
             }
@@ -655,7 +649,7 @@ IGL_INLINE bool
       if(type == Axis) {
           data()->show_faces = 0;
           data()->show_lines = 0;
-          data()->show_overlay = 0xFF;
+          data()->show_overlay = unsigned(~0);
           data()->add_edges((Eigen::RowVector3d::UnitX()*4),-(Eigen::RowVector3d::UnitX()*4),Eigen::RowVector3d(1,0,0));
           data()->add_edges((Eigen::RowVector3d::UnitY()*4),-(Eigen::RowVector3d::UnitY()*4),Eigen::RowVector3d(0,1,0));
           data()->add_edges((Eigen::RowVector3d::UnitZ()*4),-(Eigen::RowVector3d::UnitZ()*4),Eigen::RowVector3d(0,0,1));
@@ -663,8 +657,6 @@ IGL_INLINE bool
 
       return shapeIndex;
     }
-
-
 
     int Viewer::AddShapeCopy
     (
@@ -707,56 +699,118 @@ IGL_INLINE bool
         pShapes.clear();
     }
 
-    //return coordinates in global system for a tip of arm position is local system
-    void Viewer::MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat)
+    Eigen::Matrix4d Viewer::CalculatePosMatrix(int shapeIndex, const Eigen::Matrix4d &MVP) const
     {
+        const ViewerData &mesh = GetViewerDataAt(shapeIndex);
+        Eigen::Matrix4d Model = mesh.MakeTransScaled();
+        Model = CalcParentsTrans(shapeIndex) * Model;
+        Eigen::Matrix4d posMatrix = MVP * Model;
+        return posMatrix;
+    }
+
+    double Viewer::CalculateDepthOfMesh(const ViewerData &mesh, const Eigen::Matrix4d &posMatrix) const
+    {
+        double minDepth = std::numeric_limits<double>::infinity();
+        for (size_t vi = 0; vi < mesh.V.rows(); ++vi)
+        {
+            Eigen::Vector3d vertex = mesh.V.row(vi).head<3>();
+            Eigen::Vector4d transformed = posMatrix * vertex.homogeneous();
+            double depth = transformed.z();
+            if (minDepth > depth)
+            {
+                minDepth = depth;
+            }
+        }
+        return minDepth;
+    }
+
+    void Viewer::AppendDepthsOfPicked(std::vector<double> &depths, const Eigen::Matrix4d &MVP) const
+    {
+        for (int pShape : pShapes)
+        {
+            Eigen::Matrix4d posMatrix = CalculatePosMatrix(pShape, MVP);
+            depths.push_back(CalculateDepthOfMesh(GetViewerDataAt(pShape), posMatrix));
+        }
+    }
+
+    Eigen::Matrix4d Viewer::GetTransformationMatrix(int dataIndex) const
+    {
+        Eigen::Matrix4d scnMat = Eigen::Matrix4d::Identity();
+        if (!staticScene)
+        {
+            scnMat = MakeTransd();
+        }
+        return scnMat;
+    }
+
+    //return coordinates in global system for a tip of arm position is local system
+    void Viewer::MouseProccessing
+    (
+        int button,
+        int xrel,
+        int yrel,
+        const igl::opengl::Camera &camera,
+        int viewpoertSize,
+        const std::vector<double> &depths
+    )
+    {
+        Eigen::Matrix4d cameraMat = camera.MakeTransd();
+
         // Changed: modified to support mesh transformations and multipicking
         // TODO no scale?
-        Eigen::Matrix4d scnMat = Eigen::Matrix4d::Identity();
-        if (selected_data_index <= 0 && !staticScene)
-            scnMat = MakeTransd();
-        else if (!staticScene)
-            scnMat = (MakeTransd() * GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index));
-        else if(selected_data_index > 0)
-            scnMat = (GetPriviousTrans(Eigen::Matrix4d::Identity(), selected_data_index));
+        Eigen::Matrix4d scnMat = GetTransformationMatrix();
 
         if (button == 1)
         {
-            for (int pShape : pShapes)
+            for (size_t i = 0; i < pShapes.size(); ++i)
             {
+                Eigen::Matrix4d preMat = scnMat * cameraMat.inverse();
+                int pShape = pShapes[i];
+                double depth = depths[i];
+                double movCoeff = camera.CalcMoveCoeff(depth, viewpoertSize);
                 selected_data_index = pShape;
-                WhenTranslate(scnMat * cameraMat.inverse(), -xrel / movCoeff, yrel / movCoeff);
+                WhenTranslate(preMat, -xrel * movCoeff, yrel * movCoeff);
             }
-            // TODO apply to camera
-            //if (pShapes.size() == 0) {
-            //    WhenTranslate(cameraMat * scnMat, -xrel / movCoeff, yrel / movCoeff);
-            //}
+            if (pShapes.size() == 0)
+            {
+                double cameraFar = camera.data.zFar, cameraNear = camera.data.zNear;
+                double cameraDepth = cameraFar + 0.5f * (cameraNear - cameraFar);
+                double movCoeff = camera.CalcMoveCoeff(cameraDepth, viewpoertSize);
+                TranslateCamera(-xrel * movCoeff * 0.1, yrel * movCoeff * 0.1, 0);
+            }
         }
         else
         {
-            movCoeff = 2.0f;
-
+            float movCoeff = 2.0f;
             if (button == 0)
             {
+                Eigen::Matrix4d preMat = cameraMat * scnMat;
+                double factor = movCoeff * EIGEN_PI / 8.0 / 180;
+                float dx = -xrel * factor;
+                float dy = yrel * factor;
                 for (int pShape : pShapes)
                 {
                     selected_data_index = pShape;
-                    WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
+                    WhenRotate(preMat, dx, dy);
                 }
-                // TODO apply to camera
-                //if (pShapes.size() == 0) {
-                //    WhenRotate(cameraMat * scnMat, -((float)xrel / 180) / movCoeff, ((float)yrel / 180) / movCoeff);
-                //}
+                if (pShapes.size() == 0)
+                {
+                    RotateCamera(dx, dy);
+                }
             }
             else
             {
-
+                double dy = -yrel * movCoeff;
+                Eigen::Matrix4d preMat = scnMat * cameraMat.inverse();
                 for (int pShape : pShapes)
                 {
                     selected_data_index = pShape;
-                    WhenScroll(cameraMat * scnMat, yrel / movCoeff);
+                    WhenScroll(preMat, dy);
                 }
-                // TODO apply to camera
+                if (pShapes.size() == 0)
+                {
+                    TranslateCamera(0.0, 0.0, dy);
+                }
             }
         }
     }
@@ -807,13 +861,7 @@ IGL_INLINE bool
 
     }
 
-    float Viewer::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y)
-    {
-        // Changed: default picking
-        return -1.0;
-    }
-
-    void Viewer::WhenTranslate( const Eigen::Matrix4d& preMat, float dx, float dy)
+    void Viewer::WhenTranslate(const Eigen::Matrix4d& preMat, float dx, float dy)
     {
         Eigen::Matrix3d rot = preMat.block<3, 3>(0, 0);
         Transform(GetMovableTransformee(), [&rot, &dx, &dy](Movable &movable)
@@ -863,7 +911,7 @@ IGL_INLINE bool
         return (materials.size() - 1);
     }
 
-    Eigen::Matrix4d Viewer::GetPriviousTrans(const Eigen::Matrix4d& View, unsigned int index)
+    Eigen::Matrix4d Viewer::GetPriviousTrans(const Eigen::Matrix4d& View, unsigned int index) const
     {
         Eigen::Matrix4d Model = Eigen::Matrix4d::Identity();
         int p = index >= 0 ? parents[index] : -1;
@@ -873,38 +921,6 @@ IGL_INLINE bool
             return  View.inverse() * Model;
         else
             return Model;
-    }
-
-    float Viewer::AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right, int up, int bottom, const std::vector<std::pair<int, int>> &stencilLayers)
-    {
-        //not correct when the shape is scaled
-        Eigen::Matrix4d MVP = PV * MakeTransd();
-        std::cout << "picked shapes  ";
-        bool isFound = false;
-        for (int i = 1; i < data_list.size(); i++)
-        { //add to pShapes if the center in range
-            Eigen::Matrix4d Model = data_list[i]->MakeTransd();
-            Model = CalcParentsTrans(i) * Model;
-            Eigen::Vector4d pos = MVP * Model * Eigen::Vector4d(0,0,0,1);
-            float xpix = (1 + pos.x() / pos.z()) * viewport.z() / 2;
-            float ypix = (1 + pos.y() / pos.z()) * viewport.w() / 2;
-            if (ShouldRenderViewerData(*data_list[i], sectionIndex, layerIndex) && xpix < right && xpix > left && ypix < bottom && ypix > up)
-            {
-                pShapes.push_back(i);
-                data_list[i]->AddSectionLayers(stencilLayers);
-                std::cout << i << ", ";
-                selected_data_index = i;
-                isFound = true;
-            }
-        }
-        std::cout << std::endl;
-        if (isFound)
-        {
-            Eigen::Vector4d tmp = MVP  * GetPriviousTrans(Eigen::Matrix4d::Identity(),selected_data_index ) * data()->MakeTransd() * Eigen::Vector4d(0, 0, 1, 1);
-            return (float)tmp.z();
-        }
-        else
-            return -1;
     }
 
     bool Viewer::ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const

@@ -12,7 +12,7 @@
 #endif
 
 
-Renderer::Renderer(igl::opengl::CameraData cameraData)
+Renderer::Renderer(igl::opengl::CameraData cameraData) : depths{}, manyPickCameraTransformation{ Eigen::Matrix4d::Identity() }
 {
 
     callback_init = nullptr;
@@ -35,7 +35,7 @@ Renderer::Renderer(igl::opengl::CameraData cameraData)
     callback_key_down_data = nullptr;
     callback_key_up_data = nullptr;
     glLineWidth(5);
-    cameras.push_back(new igl::opengl::Camera(cameraData));
+    //cameras.push_back(new igl::opengl::Camera(cameraData));
     isPressed = false;
     isMany = false;
     xold = 0;
@@ -119,7 +119,7 @@ IGL_INLINE void Renderer::draw_by_info(int sectionIndex, int layerIndex, int inf
     else
         glDisable(GL_BLEND);
 
-    Eigen::Matrix4f Proj = camera.GetViewProjection().cast<float>();
+    Eigen::Matrix4f Proj = camera.GetViewProjection(viewportSize(2)*1.0/viewportSize(3)).cast<float>();
     Eigen::Matrix4f View = camera.MakeTransScaled().inverse().cast<float>();
 
     if (info.flags & toClear)
@@ -158,12 +158,15 @@ IGL_INLINE void Renderer::draw( GLFWwindow* window)
     int sectionIndex = 0;
     for (auto& section : windowSections)
     {
+        if (!section->isActive()) {
+            sectionIndex++;
+            continue;
+        }
         int layerIndex = 0;
         for (auto& layer : section->GetLayers()) {
             int infoIndex = 0;
             for (auto& info : layer->getInfos()) {
                 // Added: changed multipicking to work when inAction2 && !stencilTest && isSelecting and single picking to work when inAction && stencilTest && isPicked
-                // TODO what happend when picking in one section? will it render the scissor box twice?
                 if (
                     // regular info
                     !(info->flags & (inAction | inAction2)) || 
@@ -213,9 +216,9 @@ float Renderer::UpdatePosition(float xpos, float ypos)
 
 void Renderer::UpdatePress(float xpos, float ypos)
 {
-    if (currentSection < 0 || !CheckSection(xpos, ypos, currentSection)) {
+    if (currentSection < 0 || !windowSections[currentSection]->isActive() || !CheckSection(xpos, ypos, currentSection)) {
         for (int i = 0; i < GetSectionsSize(); i++) {
-            if (CheckSection(xpos, ypos, i)) {
+            if (windowSections[i]->isActive() && CheckSection(xpos, ypos, i)) {
                 UpdateSection(i);
                 break;
             }
@@ -229,18 +232,21 @@ int Renderer::AddCamera(const Eigen::Vector3d& pos, igl::opengl::CameraData came
 {
     int cameraIndex = cameras.size();
     cameras.push_back(new igl::opengl::Camera(cameraData));
-    cameras.back()->MyTranslate(pos, false);
+    cameras.back()->MyTranslate(pos, true);
     return cameraIndex;
 }
 
-void Renderer::AddSection(int left, int bottom, int width, int height, int buffIndex,
-    bool createStencilLayer, bool createScissorsLayer)
+int Renderer::AddSection(int left, int bottom, int width, int height, int buffIndex,
+    bool createStencilLayer, bool createScissorsLayer, bool clearBuffer, bool autoAddToSection,
+    bool allowRotation)
 {
     windowSections.emplace_back(new WindowSection(left, bottom, width, height, 
-        buffIndex, next_property_id, GetSectionsSize(), createStencilLayer, createScissorsLayer));
+        buffIndex, next_property_id, GetSectionsSize(), 
+        createStencilLayer, createScissorsLayer, clearBuffer, autoAddToSection, allowRotation));
     next_property_id <<= windowSections.back()->GetLayers().size();
     windowSections.back()->SetCamera(0);
     glViewport(left, bottom, width, height);
+    return (int)windowSections.size() - 1;
 }
 
 void Renderer::AddDraw(int sectionIndex, int layerIndex, int buffIndx, unsigned int flags)
@@ -265,18 +271,19 @@ bool Renderer::Picking(int x, int y)
     UnPick();
     WindowSection& section = *windowSections[currentSection];
     igl::opengl::Camera& currentCamera = *cameras[section.GetCamera()];
-    Eigen::Matrix4d Proj = currentCamera.GetViewProjection().cast<double>();
+    Eigen::Vector4i viewportSize = section.GetViewportSize();
+    Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
     Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
-    depth = GetScene()->Picking(Proj*View, section.GetViewportSize(), currentSection, section.GetSceneLayerIndex(), GetStencilTestLayersIndexes(), x, y);
+    float depth = GetScene()->Picking(Proj*View, section.GetViewportSize(), currentSection, section.GetSceneLayerIndex(), GetStencilTestLayersIndexes(), x, y);
     if (depth != -1)
     {
-        depth = (depth * 2.0f - currentCamera.GetFar()) / (currentCamera.GetNear() - currentCamera.GetFar());
         isMany = false;
         isPicked = true;
+        depths.push_back(depth);
         return true;
     }
-    else {
-        depth = 0;
+    else
+    {
         return false;
     }
 }
@@ -285,12 +292,35 @@ bool Renderer::TrySinglePicking(int x, int y)
 {
     // Added: try to single picking when in many selected mode if the click is singular
     double dist = sqrt(pow(xWhenPress - x, 2) + pow(yWhenPress - y, 2));
-    if (IsMany() && dist <= 3) {
+    if (IsMany() && dist <= 3.0)
+    {
         return Picking(x, y);
     }
     return false;
 }
 
+void Renderer::RecalculateDepths(const WindowSection &section, const Eigen::Matrix4d &ViewInv)
+{
+    Eigen::Vector4i viewportSize = section.GetViewportSize();
+    igl::opengl::Camera &currentCamera = *cameras[section.GetCamera()];
+    Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
+    Eigen::Matrix4d View = ViewInv.inverse();
+    Eigen::Matrix4d MVP = Proj * View * scn->MakeTransd();
+    depths.clear();
+    scn->AppendDepthsOfPicked(depths, MVP);
+}
+
+void Renderer::RecalculateDepths()
+{
+    WindowSection &section = *windowSections[currentSection];
+    const igl::opengl::Camera &currentCamera = *cameras[section.GetCamera()];
+    auto ViewInv = currentCamera.MakeTransScaled();
+    if (ViewInv != manyPickCameraTransformation)
+    {
+        RecalculateDepths(section, ViewInv);
+        manyPickCameraTransformation = ViewInv;
+    }
+}
 
 //void Renderer::OutLine()
 //{
@@ -310,17 +340,22 @@ void Renderer::PickMany(int x, int y)
     int xMax = std::max(xWhenPress, xold) - viewportSize.x();
     int yMax = viewportSize.w() - std::min(localPressY, localReleaseY);
     UnPick();
-    Eigen::Matrix4d Proj = currentCamera.GetViewProjection().cast<double>();
-    Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
-    depth = scn->AddPickedShapes(Proj*View, viewportSize, currentSection, section.GetSceneLayerIndex(), xMin, xMax, yMin, yMax, GetStencilTestLayersIndexes());
-    if (depth != -1)
+    Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
+    Eigen::Matrix4d ViewInv = currentCamera.MakeTransScaled();
+    Eigen::Matrix4d View = ViewInv.inverse();
+    bool hasAny = scn->AddPickedShapes
+    (
+        Proj*View,
+        viewportSize, currentSection, section.GetSceneLayerIndex(),
+        xMin, xMax, yMin, yMax,
+        GetStencilTestLayersIndexes(),
+        depths
+    );
+    if (hasAny)
     {
-        depth = (depth*2.0f - currentCamera.GetFar()) / (currentCamera.GetNear() - currentCamera.GetFar());
         isMany = true;
         isPicked = true;
-    }
-    else {
-        depth = 0;
+        manyPickCameraTransformation = ViewInv;
     }
 }
 
@@ -437,17 +472,26 @@ void Renderer::MouseProccessing(int button)
     // Changed: allways process mouse input
     WindowSection& section = *windowSections[currentSection];
     igl::opengl::Camera& camera = *cameras[section.GetCamera()];
-    if(button == GLFW_MOUSE_BUTTON_MIDDLE)
-	    scn->MouseProccessing(button, zrel, zrel, CalcMoveCoeff(section.GetCamera(), section.GetViewportSize().z()), 
-            camera.MakeTransd());
+    int xrel{}, yrel{};
+    if (button == GLFW_MOUSE_BUTTON_MIDDLE)
+    {
+        xrel = zrel;
+        yrel = zrel;
+    }
     else
-        scn->MouseProccessing(button, xrel, yrel, CalcMoveCoeff(section.GetCamera(), section.GetViewportSize().z()),
-            camera.MakeTransd());
-}
+    {
+        xrel = this->xrel;
+        yrel = this->yrel;
+    }
 
-float Renderer::CalcMoveCoeff(int cameraIndx, int width)
-{
-    return cameras[cameraIndx]->CalcMoveCoeff(depth,width);
+    Eigen::Vector4i viewport = section.GetViewportSize();
+    scn->MouseProccessing
+    (
+        button,
+        xrel, yrel,
+        camera, viewport.w(),
+        depths
+    );
 }
 
 //unsigned int Renderer::AddBuffer(int infoIndx)
@@ -493,36 +537,23 @@ float Renderer::CalcMoveCoeff(int cameraIndx, int width)
 //    SwapDrawInfo(2, 3);
 //}
 
-IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, std::list<int>xViewport, std::list<int>yViewport, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu)
+IGL_INLINE void Renderer::Init(igl::opengl::glfw::Viewer* scene, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu)
 {
     scn = scene;
     menu = _menu;
-    MoveCamera(0, zTranslate, 10);
+    //MoveCamera(0, zTranslate, 10);
     Eigen::Vector4i viewport;
     glGetIntegerv(GL_VIEWPORT, viewport.data());
     buffers.push_back(new igl::opengl::DrawBuffer());
     maxPixX = viewport.z();
     maxPixY = viewport.w();
-    xViewport.push_front(0);
-    yViewport.push_front(0);
-    std::list<int>::iterator xit = xViewport.begin();
-    int indx = 0;
-    
-    for (++xit; xit != xViewport.end(); ++xit)
-    {
-        std::list<int>::iterator yit = yViewport.begin();
-        for (++yit; yit != yViewport.end(); ++yit)
-        {
-            AddSection(*std::prev(xit), *std::prev(yit), *xit - *std::prev(xit), *yit - *std::prev(yit),
-                0, true, true);
-        }
-    }
     if (menu)
     {
         menu->callback_draw_viewer_menu = [&]()
         {
             // Draw parent menu content
             auto temp = Eigen::Vector4i(0,0,0,0); // set imgui to min size and top left corner
+            menu->draw_labels_window(this, *scn, GetSections());
             menu->draw_viewer_menu(this, *scn,cameras, cameraData, temp);
         };
     }

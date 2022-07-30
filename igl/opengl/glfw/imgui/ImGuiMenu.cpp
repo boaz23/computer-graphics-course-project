@@ -8,17 +8,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 //#include "ImGuiMenu.h"
 //#include "ImGuiHelpers.h"
+#include "ImGuiMenu.h"
 #include <igl/project.h>
 #include "ImGuiHelpers.h"
 #include "igl/opengl/glfw/renderer.h"
-
-#include "ImGuiMenu.h"
-#include "igl/opengl/glfw/imgui/imgui_impl_glfw.h"
-#include "igl/opengl/glfw/imgui/imgui_impl_opengl3.h"
-
+#include "igl/opengl/glfw/WindowSection.h"
 #include "tutorial/Project/Project.h"
 
+#include "igl/opengl/glfw/imgui/imgui_impl_glfw.h"
+#include "igl/opengl/glfw/imgui/imgui_impl_opengl3.h"
 #include "igl/file_dialog_open.h"
+#include "igl/project.h"
 
 //#include <imgui_fonts_droid_sans.h>
 //#include <GLFW/glfw3.h>
@@ -206,6 +206,31 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
     ImVec2 fullWidthVec2(-1, 0);
 
   Project* project = dynamic_cast<Project*>(&viewer);
+  if (project && ImGui::CollapsingHeader("Viewports", ImGuiTreeNodeFlags_DefaultOpen))
+  {
+      bool splitMode = project->IsSplitMode();
+      bool editBezierMode = project->IsEditBezierMode();
+      if (project->isInDesignMode && ImGui::Checkbox("Split", &splitMode))
+      {
+          project->ToggleSplitMode();
+      }
+      if (project->isInDesignMode && (project->IsEditBezierMode() || project->CanEnterBezierMode()) && ImGui::Checkbox("Edit Bezier", &editBezierMode))
+      {
+          project->ToggleEditBezierMode();
+      }
+  }
+  if (project && project->IsEditBezierMode() && ImGui::CollapsingHeader("Bezier editor", ImGuiTreeNodeFlags_DefaultOpen))
+  {
+      if (project && ImGui::Button("Add curve", fullWidthVec2))
+      {
+          project->AddBezierSegment();
+      }
+      if (project && project->GetCurrentBezierMesh()->GetSegmentsCount() > 0 && ImGui::Button("Delete last curve", fullWidthVec2))
+      {
+          project->RemoveBezierSegment();
+      }
+
+  }
   if (project && ImGui::CollapsingHeader("Cameras", ImGuiTreeNodeFlags_DefaultOpen))
   {
     if (ImGui::Button("Add camera", fullWidthVec2))
@@ -243,14 +268,14 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
         static int selectedMaterialComboIndex = 0;
         auto& availableMaterials = project->availableMaterials;
 
-        bool allSameLayer = viewer.pShapes.size() == 0 ? false :
+        bool allSameMaterial = viewer.pShapes.size() == 0 ? false :
             viewer.AllPickedShapesSameValue<unsigned int>([](const igl::opengl::ViewerData& shape)
             {
                 return shape.GetMaterial();
             });
         bool fieldChanged{ false };
         int materialComboIndex{ -1 };
-        if (allSameLayer)
+        if (allSameMaterial)
         {
             unsigned int commonMaterialIndex = viewer.GetViewerDataAt(viewer.pShapes[0]).GetMaterial();
             for (size_t i = 0; i < availableMaterials.size(); ++i)
@@ -263,20 +288,27 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
                 }
             }
 
-            if (selectedMaterialComboIndex != materialComboIndex)
+            if (materialComboIndex >= 0)
             {
-                selectedMaterialComboIndex = materialComboIndex;
-                fieldChanged = true;
+                if (selectedMaterialComboIndex != materialComboIndex)
+                {
+                    selectedMaterialComboIndex = materialComboIndex;
+                    fieldChanged = true;
+                }
+            }
+            else
+            {
+                allSameMaterial = false;
             }
         }
 
-        const std::string& materialComboPreview = allSameLayer ? availableMaterials[materialComboIndex].second : "";
+        const std::string& materialComboPreview = allSameMaterial ? availableMaterials[materialComboIndex].second : "";
         if (ImGui::BeginCombo("##material", materialComboPreview.c_str()))
         {
             bool valueChanged{ false };
             for (size_t i = 0; i < availableMaterials.size(); ++i)
             {
-                const bool item_selected = i == selectedMaterialComboIndex && allSameLayer;
+                const bool item_selected = i == selectedMaterialComboIndex && allSameMaterial;
                 const char* item_text = availableMaterials[i].second.c_str();
                 if (ImGui::Selectable(item_text, item_selected))
                 {
@@ -398,29 +430,42 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
 
       ImGui::PopItemWidth();
   }
-
-  if (project != nullptr && ImGui::CollapsingHeader("Transperancy", ImGuiTreeNodeFlags_DefaultOpen))
+  bool selectedTransparentableShapes = false;
+  if (project != nullptr) {
+      for (int pshape : project->pShapes) {
+          if (project->GetProjectMeshByIndex(pshape)->IsTransparentAllowed()) {
+              selectedTransparentableShapes = true;
+              break;
+          }
+      }
+  }
+  if (project != nullptr && selectedTransparentableShapes && ImGui::CollapsingHeader("Transperancy", ImGuiTreeNodeFlags_DefaultOpen))
   {
       ImGui::Text("Alpha:");
       ImGui::SameLine(0, p);
 
       // Objects Transperancy
       if (project->pShapes.size() > 0)
-          _trans_slidebar_val = project->data_list[project->pShapes[project->pShapes.size() - 1]]->alpha;
+          _trans_slidebar_val = project->GetProjectMeshByIndex(project->pShapes[project->pShapes.size() - 1])->GetAlpha();
 
       bool _hide_slide_val = false;
 
       if (project->pShapes.size() > 1)
       {
           for (int pshape : project->pShapes)
-              if (project->data_list[pshape]->alpha != project->data_list[project->pShapes[0]]->alpha)
+              if (project->GetProjectMeshByIndex(pshape)->GetAlpha() != project->GetProjectMeshByIndex(project->pShapes[0])->GetAlpha())
                   _hide_slide_val = true;
       }
 
-      if (ImGui::SliderFloat("##alphaSlider", &_trans_slidebar_val, 0.0, 1.0, _hide_slide_val ? "" : "%.2f"))
-          if (project->pShapes.size() > 0)
-              for (int pshape : project->pShapes)
-                  project->data_list[pshape]->alpha = _trans_slidebar_val;
+      if (ImGui::SliderFloat("##alphaSlider", &_trans_slidebar_val, 0.0, 1.0, _hide_slide_val ? "" : "%.2f")) {
+          if (project->pShapes.size() > 0) {
+              for (int pshape : project->pShapes) {
+                  if (project->GetProjectMeshByIndex(pshape)->IsTransparentAllowed()) {
+                      project->GetProjectMeshByIndex(pshape)->SetAlpha(_trans_slidebar_val);
+                  }
+              }
+          }
+      }
   }
 
   // Viewing options
@@ -534,6 +579,91 @@ IGL_INLINE float ImGuiMenu::hidpi_scaling()
   glfwGetWindowContentScale(window, &xscale, &yscale);
   return 0.5 * (xscale + yscale);
 }
+
+IGL_INLINE void ImGuiMenu::draw_labels_window(Renderer* rndr, igl::opengl::glfw::Viewer& viewer, std::vector<WindowSection*>& sections)
+{
+    Project* project = dynamic_cast<Project*>(&viewer);
+    // Text labels
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Always);
+    bool visible = true;
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+    ImGui::Begin("ViewerLabels", &visible,
+        ImGuiWindowFlags_NoTitleBar
+        | ImGuiWindowFlags_NoResize
+        | ImGuiWindowFlags_NoMove
+        | ImGuiWindowFlags_NoScrollbar
+        | ImGuiWindowFlags_NoScrollWithMouse
+        | ImGuiWindowFlags_NoCollapse
+        | ImGuiWindowFlags_NoSavedSettings
+        | ImGuiWindowFlags_NoInputs);
+    for (int i = 0; i < rndr->GetSectionsSize(); i++) {
+        WindowSection& section = rndr->GetSection(i);
+        igl::opengl::Camera& camera = rndr->GetCamera(section.GetCamera());
+        Eigen::Vector4i viewport = section.GetViewportSize();
+        Eigen::Matrix4d Proj = camera.CalcProjection(viewport.z() * 1.0 / viewport.w()).cast<double>();
+        Eigen::Matrix4d View = camera.MakeTransScaled().inverse() * project->MakeTransScaled();
+        if (section.isActive()) {
+            for (const auto& data : project->data_list)
+            {
+                if (project->ShouldRenderViewerData(*data, i, section.GetSceneLayerIndex())) {
+                    draw_labels(*data, section, Proj, View * data->MakeTransScaled());
+                }
+            }
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+}
+
+IGL_INLINE void ImGuiMenu::draw_labels(const igl::opengl::ViewerData& data, WindowSection& section, Eigen::Matrix4d Proj,
+    Eigen::Matrix4d View)
+{
+    if (data.show_custom_labels != 0 && data.labels_positions.rows() > 0)
+    {
+        for (int i = 0; i < data.labels_positions.rows(); ++i)
+        {
+            draw_text(
+                data.labels_positions.row(i),
+                Eigen::Vector3d(0.0, 0.0, 0.0),
+                data.labels_strings[i],
+                section,
+                Proj,
+                View,
+                data.label_color);
+        }
+    }
+}
+
+IGL_INLINE void ImGuiMenu::draw_text(
+    Eigen::Vector3d pos,
+    Eigen::Vector3d normal,
+    const std::string& text,
+    WindowSection& section,
+    Eigen::Matrix4d Proj,
+    Eigen::Matrix4d View,
+    const Eigen::Vector4f color)
+{
+    pos += normal * 0.005f;
+    //igl::project(Eigen::Matrix)    
+    Eigen::Vector3d coord = 
+        igl::project<double>(pos, View, Proj, section.GetViewportSize().cast<double>());
+
+    // Draw text labels slightly bigger than normal text
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(),
+        ImVec2(coord[0] / pixel_ratio_, (section.GetViewportSize().w() - coord[1]) / pixel_ratio_),
+        ImGui::GetColorU32(ImVec4(
+            color(0),
+            color(1),
+            color(2),
+            color(3))),
+        &text[0], &text[0] + text.size());
+}
+
+
 
 } // end namespace
 } // end namespace

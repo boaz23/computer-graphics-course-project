@@ -118,9 +118,14 @@ public:
 
     int AddCamera(const Eigen::Vector3d &pos, igl::opengl::CameraData cameraData);
 
-    void AddSection(int left, int bottom, int width, int height, int buffIndex,
-        bool createStencilLayer, bool createScissorsLayer);
+    int AddSection(int left, int bottom, int width, int height, int buffIndex,
+        bool createStencilLayer, bool createScissorsLayer, bool clearBuffer, 
+        bool autoAddToSection=true,
+        bool allowRotation=true);
 
+    inline void ActivateSection(int sectionIndex) { windowSections[sectionIndex]->Activate(); }
+    inline void DeactivateSection(int sectionIndex) { windowSections[sectionIndex]->Deactivate(); }
+    inline bool IsSectionActive(int sectionIndex) { return windowSections[sectionIndex]->isActive(); }
     //unsigned int AddBuffer(int infoIndx);
 
     //int Create2Dmaterial(int infoIndx, int code);
@@ -175,8 +180,6 @@ public:
 
     inline std::vector<WindowSection*>& GetSections() { return windowSections; }
 
-    float CalcMoveCoeff(int cameraIndx, int width);
-
     //void SetBuffers();
 
     inline void UpdateZpos(int ypos) { zrel = ypos; }
@@ -185,11 +188,13 @@ public:
         // Changed: clear isMany also
         isPicked = false;
         isMany = false;
+        manyPickCameraTransformation = Eigen::Matrix4d::Identity();
+        depths.clear();
         scn->ClearPickedShapes(GetStencilTestLayersIndexes());
     }
     inline bool IsPicked() { return isPicked; }
     inline bool IsMany() const { return isMany; }
-    void Init(igl::opengl::glfw::Viewer *scene, std::list<int> xViewport, std::list<int> yViewport, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
+    void Init(igl::opengl::glfw::Viewer *scene, igl::opengl::CameraData cameraData, int pickingBits,igl::opengl::glfw::imgui::ImGuiMenu *_menu);
     // Added: functions for selection mode and to try single pick
     bool isInSelectMode() {
         return isSelecting;
@@ -200,12 +205,17 @@ public:
     inline void finishSelect() {
         isSelecting = false;
     }
-    bool TrySinglePicking(int x, int y);
 
-    std::vector<std::pair<int, int>> GetSceneLayersIndexes() {
+    bool TrySinglePicking(int x, int y);
+    void RecalculateDepths();
+    void RecalculateDepths(const WindowSection &section, const Eigen::Matrix4d &ViewInv);
+
+    std::vector<std::pair<int, int>> GetSceneLayersIndexes(bool onlyAutoAdd=true) {
         std::vector<std::pair<int, int>> layers;
         for (int i = 0; i < GetSectionsSize(); i++) {
-            layers.push_back(std::pair<int, int>(i, windowSections[i]->GetSceneLayerIndex()));
+            if ((!onlyAutoAdd || windowSections[i]->IsAutoAddSection()) && windowSections[i]->GetSceneLayerIndex() != -1) {
+                layers.push_back(std::pair<int, int>(i, windowSections[i]->GetSceneLayerIndex()));
+            }
         }
         return layers;
     }
@@ -213,7 +223,8 @@ public:
     std::vector<std::pair<int, int>> GetScissorsTestLayersIndexes() {
         std::vector<std::pair<int, int>> layers;
         for (int i = 0; i < GetSectionsSize(); i++) {
-            layers.push_back(std::pair<int, int>(i, windowSections[i]->GetScissorTestLayerIndex()));
+            if(windowSections[i]->GetScissorTestLayerIndex() != -1)
+                layers.push_back(std::pair<int, int>(i, windowSections[i]->GetScissorTestLayerIndex()));
         }
         return layers;
     }
@@ -221,7 +232,8 @@ public:
     std::vector<std::pair<int, int>> GetStencilTestLayersIndexes() {
         std::vector<std::pair<int, int>> layers;
         for (int i = 0; i < GetSectionsSize(); i++) {
-            layers.push_back(std::pair<int, int>(i, windowSections[i]->GetStencilTestLayerIndex()));
+            if (windowSections[i]->GetScissorTestLayerIndex() != -1)
+                layers.push_back(std::pair<int, int>(i, windowSections[i]->GetStencilTestLayerIndex()));
         }
         return layers;
     }
@@ -242,6 +254,8 @@ private:
     int xWhenPress, yWhenPress;
     bool isMany;
     bool isPicked;
+    std::vector<double> depths;
+    Eigen::Matrix4d manyPickCameraTransformation;
     // Added: added selection flag
     bool isSelecting;
     int materialIndx2D;
@@ -249,11 +263,9 @@ private:
     int currentSection;
 	unsigned int next_property_id = 1;
 	float highdpi;
-	float depth;
 	unsigned int left_view, right_view;
 	double doubleVariable;
 	igl::opengl::glfw::imgui::ImGuiMenu* menu;
-	double z;
 
     void draw_by_info(int sectionIndex, int layerIndex, int info_index, int width, int height);
 

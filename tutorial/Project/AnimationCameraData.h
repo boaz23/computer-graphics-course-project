@@ -1,13 +1,15 @@
 #pragma once
 #ifndef PROJECT_ANIMATION_CAMERA_H
 #define PROJECT_ANIMATION_CAMERA_H
+#include "./AnimatedMesh.h"
 
-#include "igl/opengl/ViewerData.h"
-
-class AnimationCameraData : public igl::opengl::ViewerData {
+#define CAMERA_COLOR Eigen::Vector3d(0.90625, 0.90625, 0.90625)
+class AnimationCameraData : public AnimatedMesh {
 public:
 	AnimationCameraData(int layer, int cameraIndex)
-		: igl::opengl::ViewerData(layer), cameraIndex{cameraIndex} {}
+		: 
+		AnimatedMesh(layer, true, true, false, CAMERA_COLOR), 
+		cameraIndex{cameraIndex} {}
 
 	int cameraIndex;
 };

@@ -18,6 +18,7 @@
 #include "../ViewerData.h"
 #include "ViewerPlugin.h"
 #include "igl/opengl/Movable.h"
+#include "igl/opengl/Camera.h"
 #include "igl/opengl/glfw/Material.h"
 
 
@@ -183,7 +184,7 @@ namespace glfw
     // Returns 0 if not found
     IGL_INLINE size_t mesh_index(const int id) const;
 
-	Eigen::Matrix4d CalcParentsTrans(int indx);
+	Eigen::Matrix4d CalcParentsTrans(int indx) const;
 	inline bool SetAnimation() { return isActive = !isActive; }
     inline  bool  IsActive() const { return isActive; }
     inline void Activate() { isActive = true; }
@@ -248,11 +249,15 @@ public:
 
       int AddMaterial(unsigned int *texIndices, unsigned int *slots, unsigned int size);
 
-      Eigen::Matrix4d GetPriviousTrans(const Eigen::Matrix4d &View, unsigned int index);
+      Eigen::Matrix4d GetPriviousTrans(const Eigen::Matrix4d &View, unsigned int index) const;
 
-      float
-      AddPickedShapes(const Eigen::Matrix4d &PV, const Eigen::Vector4i &viewport, int sectionIndex, int layerIndex, int left, int right,
-                      int up, int bottom, const std::vector<std::pair<int, int>> &stencilLayers);
+      IGL_INLINE Eigen::Matrix4d CalculatePosMatrix(int shapeIndex, const Eigen::Matrix4d &MVP) const;
+
+      virtual bool AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right,
+          int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers, std::vector<double> &depths) = 0;
+
+      double CalculateDepthOfMesh(const ViewerData &mesh, const Eigen::Matrix4d &posMatrix) const;
+      void AppendDepthsOfPicked(std::vector<double> &depths, const Eigen::Matrix4d &MVP) const;
 
       template<typename T> bool AllPickedShapesSameValue(std::function<T(const ViewerData&)> valueFunc) const
       {
@@ -275,18 +280,30 @@ public:
           return true;
       }
 
-      void
-      MouseProccessing(int button, int xrel, int yrel, float movCoeff, Eigen::Matrix4d cameraMat);
+      void MouseProccessing
+      (
+          int button,
+          int xrel,
+          int yrel,
+          const igl::opengl::Camera &camera,
+          int viewpoertSize,
+          const std::vector<double> &depths
+      );
 
       virtual void WhenTranslate(const Eigen::Matrix4d &preMat, float dx, float dy);
       virtual void WhenScroll(const Eigen::Matrix4d &preMat, float dy);
       virtual void WhenRotate(const Eigen::Matrix4d &preMat, float dx, float dy);
 
-private:
     Movable &GetMovableTransformee(int shapeIndex);
-    Movable &GetMovableTransformee()
+    IGL_INLINE Movable &GetMovableTransformee()
     {
         return GetMovableTransformee(selected_data_index);
+    }
+
+    Eigen::Matrix4d GetTransformationMatrix(int dataIndex) const;
+    IGL_INLINE Eigen::Matrix4d GetTransformationMatrix() const
+    {
+        return GetTransformationMatrix(selected_data_index);
     }
 
 protected:
@@ -310,7 +327,7 @@ public:
 
       void ShapeTransformation(int type, float amt, int mode);
 
-      virtual float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y);
+      virtual float Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewportDims, int sectionIndex, int layerIndex, const std::vector<std::pair<int, int>> &stencilLayers, int x, int y) = 0;
       //inline void UnPick() { selected_data_index = -1; pickedShapes.clear(); }
 
       int AddShader(const std::string &Vertex_Shader, const std::string &Fragment_shader);
@@ -321,8 +338,13 @@ public:
           return -1;
       };
 
-  protected:
-      virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const;
+      virtual void MoveCamera(std::function<void(Movable&)> transform) {};
+
+      virtual void TranslateCamera(double dx, double dy, double dz) = 0;
+      virtual void RotateCamera(double dx, double dy) {};
+
+      virtual double GetShapeAlpha(int index) = 0;
+      virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const = 0;
       Texture* Viewer::AddTexture_Core(const std::string& textureFileName, int dim);
   };
 

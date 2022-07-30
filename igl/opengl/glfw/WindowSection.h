@@ -1,3 +1,6 @@
+#pragma once
+#ifndef WINDOW_SECTION_H
+#define WINDOW_SECTION_H
 #include <vector>
 #include <set>
 #include <igl/opengl/glfw/SectionLayer.h>
@@ -28,12 +31,18 @@ public:
     WindowSection(int x, int y, int z, int w, 
         int buffIndex, int property_id, int index,
         bool createStencilLayer,
-        bool createScissorsLayer) {
+        bool createScissorsLayer,
+        bool clearBuffer,
+        bool autoAddToSection=true,
+        bool allowRotation=true) {
         viewportDims = Eigen::Vector4i(x, y, z, w);
         sectionCameraIndex = -1;
+        active = false;
+        this->autoAddToSection = autoAddToSection;
+        this->allowRotation = allowRotation;
         sceneLayerIndex = AddSectionLayer();
         AddDraw(sceneLayerIndex, buffIndex,
-            (int)(index < 1) | depthTest | clearDepth | stencilTest |
+            (clearBuffer & toClear) | depthTest | clearDepth | stencilTest |
             passStencil | clearStencil | blend,
             property_id
         );
@@ -66,9 +75,9 @@ public:
     inline DrawInfo& GetDrawInfo(int layerIndex, int index) { return sectionLayers[layerIndex]->GetDrawInfo(index); }
 
     inline void SetCamera(int cameraIndex) { sectionCameraIndex = cameraIndex; }
-    inline int GetCamera() { return sectionCameraIndex; }
+    inline int GetCamera() const { return sectionCameraIndex; }
 
-    inline Eigen::Vector4i GetViewportSize() { return viewportDims; }
+    inline Eigen::Vector4i GetViewportSize() const { return viewportDims; }
     inline void SetViewportSize(Eigen::Vector4i newSize) { viewportDims = newSize; }
 
     inline int GetSceneLayerIndex() { return sceneLayerIndex; }
@@ -85,6 +94,13 @@ public:
             delete layer;
         }
     }
+
+    inline void Deactivate() { active = false; }
+    inline void Activate() { active = true; }
+    inline bool isActive() { return active; }
+
+    inline bool IsAutoAddSection() { return autoAddToSection; }
+    inline bool IsRotationAllowed() const { return allowRotation; }
 private:
     int sectionCameraIndex;
     std::vector<SectionLayer*> sectionLayers;
@@ -92,4 +108,9 @@ private:
     int sceneLayerIndex;
     int scissorsTestLayerIndex;
     int stencilTestLayerIndex;
+    bool active;
+    bool autoAddToSection;
+    bool allowRotation;
 };
+
+#endif
