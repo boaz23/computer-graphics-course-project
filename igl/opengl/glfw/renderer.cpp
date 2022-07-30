@@ -232,7 +232,7 @@ int Renderer::AddCamera(const Eigen::Vector3d& pos, igl::opengl::CameraData came
 {
     int cameraIndex = cameras.size();
     cameras.push_back(new igl::opengl::Camera(cameraData));
-    cameras.back()->MyTranslate(pos, false);
+    cameras.back()->MyTranslate(pos, true);
     return cameraIndex;
 }
 

@@ -259,7 +259,7 @@ int Project::AddShapeFromMenu(const std::string& filePath)
 	}
 
 	int shapeIndex = AddShapeFromFile(filePath, -1, TRIANGLES, shaderIndex_basic, renderer->GetSceneLayersIndexes(),
-		GetAnimatedDataCreator(currentEditingLayer, true, true, true));
+	GetAnimatedDataCreator(currentEditingLayer, true, true, true));
 	GetViewerDataAt(shapeIndex).SetMaterial(materialIndex_box0);
 	return shapeIndex;
 }
