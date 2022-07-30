@@ -1,4 +1,5 @@
 #pragma once   //maybe should be static class
+#include "igl/opengl/Movable.h"
 #include "igl/opengl/glfw/Display.h"
 #include "igl/opengl/glfw/renderer.h"
 #include "Project.h"
@@ -93,9 +94,27 @@
 	void glfw_window_size_callback(GLFWwindow* window, int width, int height)
 	{
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
+		rndr->resize(window,width,height);
+	}
 
-        rndr->resize(window,width,height);
-		
+	template<bool axisDir> void RotateCamera(Project *scn, const WindowSection &section, const Eigen::Vector3d &axis, double d = (1.0 / 16.0) * (axisDir ? 1 : -1))
+	{
+		if (section.IsRotationAllowed())
+		{
+			scn->MoveCamera([&axis, d](Movable &movable)
+			{
+				movable.MyRotate(axis, d);
+			});
+		}
+	}
+
+	template<bool axisDir> void TranslateCamera(Project *scn, const Movable &movable, Eigen::Index axis, double d = 0.25 * (axisDir ? 1 : -1))
+	{
+		Eigen::Vector3d amt = d * movable.GetLinear().col(axis).normalized();
+		scn->MoveCamera([&amt](Movable &movable)
+		{
+			movable.MyTranslate(amt, 1);
+		});
 	}
 
 	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -106,8 +125,9 @@
 		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
-		int currentCamera = rndr->GetCurrentSection().GetCamera();
-		bool allowRotation = rndr->GetCurrentSection().IsRotationAllowed();
+		const WindowSection &section = rndr->GetCurrentSection();
+		int currentCamera = section.GetCamera();
+		const igl::opengl::Camera &camera = rndr->GetCamera(currentCamera);
 		if (action == GLFW_PRESS || action == GLFW_REPEAT)
 		{
 			switch (key)
@@ -122,75 +142,43 @@
 					scn->Activate();
 				break;
 
-			// TODO: transformation in camera plane
+				// TODO: transformation in camera plane
 			case GLFW_KEY_UP:
-				if (allowRotation) {
-					scn->MoveCamera([](Movable& movable)
-					{
-						movable.MyRotate(Eigen::Vector3d(1, 0, 0), 0.05f);
-					});
-				}
+				RotateCamera<true>(scn, section, Eigen::Vector3d(1, 0, 0));
 				break;
 			case GLFW_KEY_DOWN:
-				if (allowRotation) {
-					scn->MoveCamera([](Movable& movable)
-					{
-						movable.MyRotate(Eigen::Vector3d(1, 0, 0), -0.05f);
-					});
-				}
+				RotateCamera<false>(scn, section, Eigen::Vector3d(1, 0, 0));
 				break;
 			case GLFW_KEY_LEFT:
-				if (allowRotation) {
-					scn->MoveCamera([](Movable& movable)
-					{
-						movable.MyRotate(Eigen::Vector3d(0, 1, 0), 0.05f);
-					});
-				}
+				RotateCamera<true>(scn, section, Eigen::Vector3d(0, 1, 0));
 				break;
 			case GLFW_KEY_RIGHT:
-				if (allowRotation) {
-					scn->MoveCamera([](Movable& movable)
-					{
-						movable.MyRotate(Eigen::Vector3d(0, 1, 0), -0.05f);
-					});
-				}
+				RotateCamera<false>(scn, section, Eigen::Vector3d(0, 1, 0));
+				break;
+			case GLFW_KEY_KP_3:
+				RotateCamera<true>(scn, section, Eigen::Vector3d(0, 0, 1));
+				break;
+			case GLFW_KEY_KP_1:
+				RotateCamera<false>(scn, section, Eigen::Vector3d(0, 0, 1));
 				break;
 
 			case GLFW_KEY_Q:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0, 0.25f, 0), 1);
-				});
+				TranslateCamera<false>(scn, camera, 1);
 				break;
 			case GLFW_KEY_E:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0, -0.25f, 0), 1);
-				});
+				TranslateCamera<true>(scn, camera, 1);
 				break;
 			case GLFW_KEY_A:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(-0.25f, 0, 0), 1);
-				});
+				TranslateCamera<false>(scn, camera, 0);
 				break;
 			case GLFW_KEY_D:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0.25f, 0, 0), 1);
-				});
+				TranslateCamera<true>(scn, camera, 0);
 				break;
 			case GLFW_KEY_S:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0, 0, 0.25f), 1);
-				});
+				TranslateCamera<true>(scn, camera, 2);
 				break;
 			case GLFW_KEY_W:
-				scn->MoveCamera([](Movable &movable)
-				{
-					movable.MyTranslate(Eigen::Vector3d(0, 0, -0.25f), 1);
-				});
+				TranslateCamera<false>(scn, camera, 2);
 				break;
 
 			case GLFW_KEY_O:
@@ -199,6 +187,7 @@
 			case GLFW_KEY_P:
 				scn->ChangeCameraIndex_ByDelta(1);
 				break;
+
 			default:
 				break;
 

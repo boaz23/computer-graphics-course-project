@@ -17,8 +17,9 @@ public:
 	void MyTranslate(Eigen::Vector3d amt, bool preRotation);
 	void TranslateInSystem(Eigen::Matrix3d rot, Eigen::Vector3d amt);
 	void SetPosition(Eigen::Vector3d newPosition) { Tout.pretranslate(newPosition - Tout.translation()); }
-	Eigen::Vector3d GetPosition() const { return Tout.translation(); }
-	Eigen::Matrix3d GetRotation() const { return Tout.rotation(); }
+	const Eigen::Vector3d GetPosition() const { return Tout.translation(); }
+	const Eigen::Matrix3d GetRotation() const { return Tout.rotation(); }
+	const Eigen::Matrix3d GetLinear() const { return Tout.linear(); }
 	void SetCenterOfRotation(Eigen::Vector3d amt);
     void MyRotate(const Eigen::Vector3d& rotAxis, double angle, int mode);
     void MyRotate(Eigen::Vector3d rotAxis, double angle);
@@ -29,8 +30,8 @@ public:
 
 	void ZeroTrans();
     virtual ~Movable() {}
-private:
 
+private:
 	Eigen::Affine3d Tout,Tin;
 };
 

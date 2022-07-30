@@ -97,7 +97,7 @@ public:
     inline bool isActive() { return active; }
 
     inline bool IsAutoAddSection() { return autoAddToSection; }
-    inline bool IsRotationAllowed() { return allowRotation; }
+    inline bool IsRotationAllowed() const { return allowRotation; }
 private:
     int sectionCameraIndex;
     std::vector<SectionLayer*> sectionLayers;

@@ -264,7 +264,7 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 		const constexpr double camera_size = 1.0 / 32.0;
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
 		shape->MyScale(Eigen::Vector3d(camera_size, camera_size, camera_size));
-		shape->MyRotate(Eigen::Vector3d(0, 1, 0), M_PI_2);
+		shape->MyRotate(Eigen::Vector3d(0, 1, 0), EIGEN_PI / 2);
 		break;
 	}
 }
