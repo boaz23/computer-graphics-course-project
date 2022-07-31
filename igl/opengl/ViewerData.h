@@ -349,6 +349,8 @@ public:
     void Draw_overlay(Shader *shader, bool cond);
 
     void Draw_overlay_pints(Shader *shader, bool cond);
+
+    virtual void AfterInit(){};
 };
 
 } // namespace opengl

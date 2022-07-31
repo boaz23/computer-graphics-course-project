@@ -121,7 +121,7 @@ IGL_INLINE void Renderer::draw_by_info(int sectionIndex, int layerIndex, int inf
         glDisable(GL_BLEND);
 
     Eigen::Matrix4f Proj = camera.GetViewProjection(viewportSize(2)*1.0/viewportSize(3)).cast<float>();
-    Eigen::Matrix4f View = camera.MakeTransScaled().inverse().cast<float>();
+    Eigen::Matrix4f View = scn->MakeCameraTransScale(section.GetCamera()).inverse();
 
     if (info.flags & toClear)
     {
@@ -130,7 +130,9 @@ IGL_INLINE void Renderer::draw_by_info(int sectionIndex, int layerIndex, int inf
         else
             Clear(info.Clear_RGBA.x(), info.Clear_RGBA.y(), info.Clear_RGBA.z(), info.Clear_RGBA.w(),info.flags);
     }
-    scn->Draw(scn->GetPickingShaderIndex(), Proj, View, sectionIndex, layerIndex, camera.GetPosition(), info.flags, info.property_id);
+    scn->Draw(scn->GetPickingShaderIndex(), 
+        Proj, View, sectionIndex, layerIndex, 
+        scn->GetCameraPosition(section.GetCamera()), info.flags, info.property_id);
 }
 
 IGL_INLINE void Renderer::draw( GLFWwindow* window)
@@ -274,7 +276,7 @@ bool Renderer::Picking(int x, int y)
     igl::opengl::Camera& currentCamera = *cameras[section.GetCamera()];
     Eigen::Vector4i viewportSize = section.GetViewportSize();
     Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
-    Eigen::Matrix4d View = currentCamera.MakeTransScaled().inverse();
+    Eigen::Matrix4d View = scn->MakeCameraTransScaled(section.GetCamera()).inverse();
     float depth = GetScene()->Picking(Proj*View, section.GetViewportSize(), currentSection, section.GetSceneLayerIndex(), GetStencilTestLayersIndexes(), x, y);
     if (depth != -1)
     {
@@ -315,7 +317,7 @@ void Renderer::RecalculateDepths()
 {
     WindowSection &section = *windowSections[currentSection];
     const igl::opengl::Camera &currentCamera = *cameras[section.GetCamera()];
-    auto ViewInv = currentCamera.MakeTransScaled();
+    auto ViewInv = scn->MakeCameraTransScaled(section.GetCamera());
     if (ViewInv != manyPickCameraTransformation)
     {
         RecalculateDepths(section, ViewInv);
@@ -345,7 +347,7 @@ void Renderer::AreaSelect(int x, int y)
     {
         UnPick();
         Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
-        Eigen::Matrix4d ViewInv = currentCamera.MakeTransScaled();
+        Eigen::Matrix4d ViewInv = scn->MakeCameraTransScaled(section.GetCamera());
         Eigen::Matrix4d View = ViewInv.inverse();
         bool hasAny = scn->AddPickedShapes
         (
@@ -518,7 +520,8 @@ void Renderer::MouseProccessing(int button)
     (
         button,
         xrel, yrel,
-        camera, viewport.w(),
+        camera, section.GetCamera(),
+        viewport.w(),
         depths
     );
 }

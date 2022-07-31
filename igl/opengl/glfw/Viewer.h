@@ -236,28 +236,28 @@ public:
           Eigen::Vector3d cameraPosition,
           unsigned int flgs,unsigned int property_id
       );
-      void Viewer::DrawShape
+      virtual void Viewer::DrawShape
       (
           size_t shapeIndex, int shaderIndx,
           const Eigen::Matrix4f &Normal, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View,
           int sectionIndex, int layerIndex,
           unsigned int flgs, unsigned int property_id
-      );
+      ) = 0;
 
 
-      void ClearPickedShapes(const std::vector<std::pair<int, int>> &stencilLayers);
+      virtual void ClearPickedShapes(const std::vector<std::pair<int, int>> &stencilLayers);
 
       int AddMaterial(unsigned int *texIndices, unsigned int *slots, unsigned int size);
 
       Eigen::Matrix4d GetPriviousTrans(const Eigen::Matrix4d &View, unsigned int index) const;
 
-      IGL_INLINE Eigen::Matrix4d CalculatePosMatrix(int shapeIndex, const Eigen::Matrix4d &MVP) const;
+      IGL_INLINE Eigen::Matrix4d CalculatePosMatrix(int shapeIndex, const Eigen::Matrix4d &MVP);
 
       virtual bool AddPickedShapes(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewport, int sectionIndex, int layerIndex, int left, int right,
           int up, int bottom, const std::vector<std::pair<int, int>>& stencilLayers, std::vector<double> &depths) = 0;
 
       double CalculateDepthOfMesh(const ViewerData &mesh, const Eigen::Matrix4d &posMatrix) const;
-      void AppendDepthsOfPicked(std::vector<double> &depths, const Eigen::Matrix4d &MVP) const;
+      void AppendDepthsOfPicked(std::vector<double> &depths, const Eigen::Matrix4d &MVP);
 
       template<typename T> bool AllPickedShapesSameValue(std::function<T(const ViewerData&)> valueFunc) const
       {
@@ -286,6 +286,7 @@ public:
           int xrel,
           int yrel,
           const igl::opengl::Camera &camera,
+          int cameraIndex,
           int viewpoertSize,
           const std::vector<double> &depths
       );
@@ -346,8 +347,21 @@ public:
       virtual void RotateCamera(const std::vector<std::pair<Eigen::Vector3d, double>> &angledAxes);
 
       virtual double GetShapeAlpha(int index) = 0;
-      virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const = 0;
+      virtual bool ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex, int meshIndex) const = 0;
       Texture* Viewer::AddTexture_Core(const std::string& textureFileName, int dim);
+      virtual Eigen::Matrix4d MakeCameraTransScaled(int cameraIndex) = 0;
+      virtual Eigen::Matrix4d MakeCameraTransd(int cameraIndex) = 0;
+      virtual Eigen::Matrix4f MakeCameraTransScale(int cameraIndex) = 0;
+      virtual Eigen::Matrix4f MakeCameraTrans(int cameraIndex) = 0;
+      virtual Eigen::Vector3d GetCameraPosition(int cameraIndex) = 0;
+      virtual Eigen::Matrix3d GetCameraLinear(int cameraIndex) = 0;
+      virtual Eigen::Matrix4d MakeMeshTransScaled(int meshIndex) = 0;
+      virtual Eigen::Matrix4d MakeMeshTransd(int meshIndex) = 0;
+      virtual Eigen::Matrix4f MakeMeshTransScale(int meshIndex) = 0;
+      virtual Eigen::Matrix4f MakeMeshTrans(int meshIndex) = 0;
+      virtual Eigen::Vector3d GetMeshPosition(int meshIndex) = 0;
+      virtual Eigen::Matrix3d GetMeshLinear(int meshIndex) = 0;
+
   };
 
 } // end namespace
