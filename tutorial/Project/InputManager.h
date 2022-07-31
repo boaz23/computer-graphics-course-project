@@ -45,7 +45,7 @@
 			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 			// if exiting select many mode apply selection
 			if (rndr->isInSelectMode()) {
-				rndr->PickMany((int)x2, (int)y2);
+				rndr->AreaSelect((int)x2, (int)y2);
 				rndr->finishSelect();
 			}
 			else

@@ -48,6 +48,8 @@ public:
 	void AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
 	void ChangeCameraIndex_ByDelta(int delta);
 	void MoveCamera(std::function<void(Movable&)> transform);
+	void ResetActiveCamera();
+
 	void InitRenderer();
 	void InitBezierSection();
 	IGL_INLINE bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }

@@ -796,11 +796,7 @@ IGL_INLINE bool
                 }
                 if (pShapes.size() == 0)
                 {
-                    RotateCamera
-                    ({
-                        std::pair<Eigen::Vector3d, double>{Eigen::Vector3d(0, 1, 0), dx},
-                        std::pair<Eigen::Vector3d, double>{Eigen::Vector3d(1, 0, 0), dy},
-                    });
+                    RotateCamera(dx, dy);
                 }
             }
             else // Scrolling
@@ -865,6 +861,15 @@ IGL_INLINE bool
                 }
             });
         }
+    }
+
+    void Viewer::RotateCamera(double dx, double dy)
+    {
+        RotateCamera
+        ({
+            std::pair<Eigen::Vector3d, double>{Eigen::Vector3d(0, 1, 0), dx},
+            std::pair<Eigen::Vector3d, double>{Eigen::Vector3d(1, 0, 0), dy},
+        });
     }
 
     void Viewer::WhenTranslate(const Eigen::Matrix4d& preMat, float dx, float dy)

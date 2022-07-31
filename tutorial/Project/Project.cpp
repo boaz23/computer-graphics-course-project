@@ -7,6 +7,7 @@
 #include <math.h>
 #include <limits>
 
+static const Eigen::Vector3d DefaultCameraPositon = Eigen::Vector3d(0.0, 0.0, 10.0);
 
 static void printMat(const Eigen::Matrix4d& mat)
 {
@@ -65,11 +66,11 @@ void Project::InitRenderer() {
 		0, false, false, false, false, false);
 	WindowSection& bezierSection = renderer->GetSection(editBezierSection);
 	bezierSection.ClearDrawFlag(bezierSection.GetSceneLayerIndex(), 0, depthTest | blend);
-	designCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), cameraData);
+	designCameraIndex = renderer->AddCamera(DefaultCameraPositon, cameraData);
 	// bezier edit camera
 	// TODO aspect ratio not realy matter
 	igl::opengl::CameraData editBezierCameraData(45, 0.75, NEAR, FAR);
-	editBezierCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), editBezierCameraData);
+	editBezierCameraIndex = renderer->AddCamera(DefaultCameraPositon, editBezierCameraData);
 	// Default full screen
 	renderer->ActivateSection(fullScreenSection);
 	renderer->GetSection(editBezierSection).SetCamera(editBezierCameraIndex);
@@ -332,14 +333,23 @@ void Project::MoveCamera(std::function<void(Movable &)> transform)
 {
 	WindowSection &section = renderer->GetCurrentSection();
 	int cameraIndex = section.GetCamera();
-	auto meshIt = camerasToMesh.find(cameraIndex);
 	igl::opengl::Camera &camera = renderer->GetCamera(cameraIndex);
+	auto meshIt = camerasToMesh.find(cameraIndex);
 	igl::opengl::ViewerData *shape = meshIt == camerasToMesh.end() ? nullptr : data_list[meshIt->second];
 	if (shape != nullptr)
 	{
 		transform(*shape);
 	}
 	transform(camera);
+}
+
+void Project::ResetActiveCamera()
+{
+	WindowSection &section = renderer->GetCurrentSection();
+	int cameraIndex = section.GetCamera();
+	igl::opengl::Camera &camera = renderer->GetCamera(cameraIndex);
+	camera.ZeroTrans();
+	camera.MyTranslate(DefaultCameraPositon, true);
 }
 
 void Project::Transform(Movable &movable, std::function<void(Movable &)> transform)

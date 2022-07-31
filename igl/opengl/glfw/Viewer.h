@@ -342,6 +342,7 @@ public:
 
       virtual void TranslateCamera(Eigen::Vector3d d) = 0;
       void TranslateCamera(const Movable &movable, const Eigen::Vector3d &d);
+      void RotateCamera(double dx, double dy);
       virtual void RotateCamera(const std::vector<std::pair<Eigen::Vector3d, double>> &angledAxes);
 
       virtual double GetShapeAlpha(int index) = 0;
