@@ -61,8 +61,6 @@ public:
 	IGL_INLINE int GetPickingShaderIndex() override { return pickingShaderIndex; }
 	ProjectMesh* GetProjectMeshByIndex(int index);
 	void ToggleSplitMode();
-	void WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy) override;
-	void RotateCamera(double dx, double dy) override;
 
 	void ToggleEditBezierMode();
 	inline bool IsSplitMode() { return splitMode; };
@@ -76,9 +74,12 @@ public:
 	double GetShapeAlpha(int index) override {
 		return GetProjectMeshByIndex(index)->GetAlpha();
 	};
-	void TranslateCamera(double dx, double dy, double dz);
-	void WhenScroll(const Eigen::Matrix4d& preMat, float dy) override;
-	void WhenTranslate(const Eigen::Matrix4d& preMat, float dx, float dy) override;
+
+	void TranslateCamera(Eigen::Vector3d d) override;
+	void RotateCamera(const std::vector<std::pair<Eigen::Vector3d, double>> &angledAxes) override;
+	void WhenTranslate(const Eigen::Matrix4d &preMat, float dx, float dy) override;
+	void WhenRotate(const Eigen::Matrix4d &preMat, float dx, float dy) override;
+	void WhenScroll(const Eigen::Matrix4d &preMat, float dy) override;
 	bool ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex) const override;
 	void Transform(Movable& movable, std::function<void(Movable&)> transform) override;
 	void InitScene();

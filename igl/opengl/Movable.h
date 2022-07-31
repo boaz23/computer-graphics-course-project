@@ -20,6 +20,10 @@ public:
 	const Eigen::Vector3d GetPosition() const { return Tout.translation(); }
 	const Eigen::Matrix3d GetRotation() const { return Tout.rotation(); }
 	const Eigen::Matrix3d GetLinear() const { return Tout.linear(); }
+	inline const void GetVectorInAxisDirection(Eigen::Vector3d &out, double d, Eigen::Index i) const
+	{
+		out = d * Tout.linear().col(i).normalized();
+	}
 	void SetCenterOfRotation(Eigen::Vector3d amt);
     void MyRotate(const Eigen::Vector3d& rotAxis, double angle, int mode);
     void MyRotate(Eigen::Vector3d rotAxis, double angle);

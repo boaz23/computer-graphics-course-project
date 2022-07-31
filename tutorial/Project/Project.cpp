@@ -634,28 +634,26 @@ igl::opengl::glfw::ViewerDataCreateFunc Project::GetAnimatedDataCreator(int laye
 	};
 }
 
-void Project::RotateCamera(double dx, double dy) {
-	if (renderer->GetCurrentSection().IsRotationAllowed()) {
-		MoveCamera([&dx, &dy](Movable& movable)
-		{
-			movable.RotateInSystem(Eigen::Vector3d(0, 1, 0), dx);
-			movable.RotateInSystem(Eigen::Vector3d(1, 0, 0), dy);
-		});
+void Project::TranslateCamera(Eigen::Vector3d d) {
+	WindowSection &section = renderer->GetCurrentSection();
+	int cameraIndex = section.GetCamera();
+	igl::opengl::Camera &camera = renderer->GetCamera(cameraIndex);
+
+	if (renderer->GetCurrentSectionIndex() == GetBezierSectionIndex())
+	{
+		double currentTranslation = camera.GetPosition().z();
+		d.z() = std::max(1 - currentTranslation, d.z());
 	}
+
+	Viewer::TranslateCamera(camera, d);
 }
 
-void Project::TranslateCamera(double dx, double dy, double dz) {
-	WindowSection& section = renderer->GetCurrentSection();
-	int cameraIndex = section.GetCamera();
-	if (cameraIndex == editBezierCameraIndex) {
-		igl::opengl::Camera& camera = renderer->GetCamera(cameraIndex);
-		double currentTranslation = camera.MakeTransScaled().col(3).z();
-		dz = std::max(1 - currentTranslation, dz);
-	}
-	MoveCamera([dx, dy, dz](Movable& movable)
+void Project::RotateCamera(const std::vector<std::pair<Eigen::Vector3d, double>> &angledAxes)
+{
+	if (renderer->GetCurrentSection().IsRotationAllowed())
 	{
-		movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(dx, dy, dz));
-	});
+		Viewer::RotateCamera(angledAxes);
+	}
 }
 
 void Project::WhenScroll(const Eigen::Matrix4d& preMat, float dy) {

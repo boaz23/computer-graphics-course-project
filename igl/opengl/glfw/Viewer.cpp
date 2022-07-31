@@ -762,6 +762,7 @@ IGL_INLINE bool
 
         if (button == 1) // Right click
         {
+            xrel *= -1;
             for (size_t i = 0; i < pShapes.size(); ++i)
             {
                 Eigen::Matrix4d preMat = scnMat * cameraMat.inverse();
@@ -769,14 +770,14 @@ IGL_INLINE bool
                 double depth = depths[i];
                 double movCoeff = camera.CalcMoveCoeff(depth, viewpoertSize);
                 selected_data_index = pShape;
-                WhenTranslate(preMat, -xrel * movCoeff, yrel * movCoeff);
+                WhenTranslate(preMat, xrel * movCoeff, yrel * movCoeff);
             }
             if (pShapes.size() == 0)
             {
                 double cameraFar = camera.data.zFar, cameraNear = camera.data.zNear;
                 double cameraDepth = cameraFar + 0.5f * (cameraNear - cameraFar);
-                double movCoeff = camera.CalcMoveCoeff(cameraDepth, viewpoertSize);
-                TranslateCamera(-xrel * movCoeff * 0.1, yrel * movCoeff * 0.1, 0);
+                double movCoeff = 0.1 * camera.CalcMoveCoeff(cameraDepth, viewpoertSize);
+                TranslateCamera(Eigen::Vector3d{ xrel * movCoeff, yrel * movCoeff, 0.0 });
             }
         }
         else
@@ -784,9 +785,9 @@ IGL_INLINE bool
             float movCoeff = 2.0f;
             if (button == 0) // Left click
             {
-                Eigen::Matrix4d preMat = cameraMat * scnMat;
+                Eigen::Matrix4d preMat = scnMat * cameraMat;
                 double factor = movCoeff * EIGEN_PI / 8.0 / 180;
-                float dx = -xrel * factor;
+                float dx = xrel * factor;
                 float dy = yrel * factor;
                 for (int pShape : pShapes)
                 {
@@ -795,7 +796,11 @@ IGL_INLINE bool
                 }
                 if (pShapes.size() == 0)
                 {
-                    RotateCamera(dx, dy);
+                    RotateCamera
+                    ({
+                        std::pair<Eigen::Vector3d, double>{Eigen::Vector3d(0, 1, 0), dx},
+                        std::pair<Eigen::Vector3d, double>{Eigen::Vector3d(1, 0, 0), dy},
+                    });
                 }
             }
             else // Scrolling
@@ -809,9 +814,56 @@ IGL_INLINE bool
                 }
                 if (pShapes.size() == 0)
                 {
-                    TranslateCamera(0.0, 0.0, dy);
+                    TranslateCamera(Eigen::Vector3d{ 0.0, 0.0, dy });
                 }
             }
+        }
+    }
+
+    void Viewer::TranslateCamera(const Movable &movable, const Eigen::Vector3d &d)
+    {
+        Eigen::Vector3d amt;
+        std::vector<Eigen::Vector3d> amounts{};
+
+        if (d.x() != 0)
+        {
+            movable.GetVectorInAxisDirection(amt, d.x(), 0);
+            amounts.push_back(amt);
+        }
+        if (d.y() != 0)
+        {
+            movable.GetVectorInAxisDirection(amt, d.y(), 1);
+            amounts.push_back(amt);
+        }
+        if (d.z() != 0)
+        {
+            movable.GetVectorInAxisDirection(amt, d.z(), 2);
+            amounts.push_back(amt);
+        }
+
+        if (amounts.size() > 0)
+        {
+            MoveCamera([&amounts](Movable &movable)
+            {
+                for (const auto &amt : amounts)
+                {
+                    movable.MyTranslate(amt, true);
+                }
+            });
+        }
+    }
+
+    void Viewer::RotateCamera(const std::vector<std::pair<Eigen::Vector3d, double>> &angledAxes)
+    {
+        if (angledAxes.size() > 0)
+        {
+            MoveCamera([&angledAxes](Movable &movable)
+            {
+                for (const auto &angledAxis : angledAxes)
+                {
+                    movable.MyRotate(angledAxis.first, angledAxis.second);
+                }
+            });
         }
     }
 
