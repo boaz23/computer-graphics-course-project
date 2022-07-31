@@ -1,9 +1,25 @@
-# EngineForAnimationCourse
-Graphic Engine based on Libigl
+Our graphics course project implementation.
+Based on a custom graphic engine based on Libigl.
 
-For compiling:
-1. Clone or download the project
-2. Download Cmake from the link in the site
-3. Run Cmake gui. choose the project folder and destination folder for the cpp project files. choose after pressing configure choose compiler (VS2019 for example). After finish configuration successfully, press configure again and after it finishes press generate. 
-4. If everything pass successfully got to the destination folder and launch the project. 
-5. Copy configuration.txt from tutorial/sandBox to build/tutorial/sandBox sandBox as a startup project and compile the project (it could take few mineutes);   
+# Difficulties
+We had a hard time working with the engine, it was messy. Most of our time went into refactoring and fixing small bugs that took some time to find.
+The features themselves were reasonable given the proper backend code to support it.
+
+# Additional Features and refactors
+* Window sections
+  * Section layers
+* Camera translations according to it's reference frame
+* Pick Bezier segment
+* etc.
+
+# Compiling
+1. Make sure CMake is installed
+2. Run Cmake GUI:
+   1. In the source code input, enter the path to where you cloned the repository.
+   2. In build path input, enter a path to your choosing (/build from the repository's root is good).
+   3. Click 'Configure' and wait for it to finish.
+   4. Click it *AGAIN*
+   5. Click 'Generate'.
+3. The above has overridden some local files in the `external` directory. In order to get our version, Either:
+  * Run `git restore *` in the directory of your local repository copy.
+  * Copy the files from the `external` directory of the repository to the your local copy of the repository.
