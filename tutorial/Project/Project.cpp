@@ -243,10 +243,12 @@ void Project::Animate()
 	if (isActive)
 	{
 		currentTime += ANIMATION_DELTA;
-		if (currentTime > CalcAnimationTime()) {
+		double secondsTime = currentTime / 0.3;
+		if (secondsTime > CalcAnimationTime()) {
 			currentTime = 0.0;
+			secondsTime = 0.0;
 		}
-		AnimationCameraData* cameraToUse = GetCameraForAnimationTime(currentTime);
+		AnimationCameraData* cameraToUse = GetCameraForAnimationTime(secondsTime);
 		WindowSection& section = renderer->GetSection(animationSectionIndex);
 		section.SetCamera(cameraToUse->cameraIndex);
 	}
@@ -541,9 +543,6 @@ void Project::TryPickSegment(const Eigen::Matrix4d& PV, const Eigen::Vector4i& v
 	currentSelectedBezierSegment = foundLineIndex == -1 ? -1 : GetCurrentBezierMesh()->GetCachedMap().row(foundLineIndex)(0);
 	SetControlPointsPosition();
 	DrawBezierCurves();
-	//float denom = Eigen::Vector3d::UnitZ().dot(dirToScene);
-	//float t = (-sourcePointScene).dot(Eigen::Vector3d::UnitZ()) / denom;
-	//Eigen::Vector3d intersectionPoint = sourcePointScene + t * dirToScene;
 }
 
 void Project::ToggleSplitMode() {

@@ -205,21 +205,19 @@ IGL_INLINE void ImGuiMenu::DrawAnimationMenu(Renderer* rndr, igl::opengl::glfw::
     ImVec2 fullWidthVec2(-1, 0);
 
     Project* project = dynamic_cast<Project*>(&viewer);
-    ImGui::PushItemWidth(100 * menu_scaling());
     if (project->IsActive()) {
-        if (ImGui::Button("Pause animation", fullWidthVec2)) {
+        if (ImGui::Button("Pause animation")) {
             project->PauseAnimation();
         }
     }
     else {
-        if (ImGui::Button("Resume animation", fullWidthVec2)) {
+        if (ImGui::Button("Resume animation")) {
             project->ResumeAnimation();
         }
     }
-    if (ImGui::Button("Stop animation", fullWidthVec2)) {
+    if (ImGui::Button("Stop animation")) {
         project->StopAnimation();
     }
-    ImGui::PopItemWidth();
     ImGui::End();
 }
 
