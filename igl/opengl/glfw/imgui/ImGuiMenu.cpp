@@ -160,8 +160,71 @@ IGL_INLINE bool ImGuiMenu::key_up(GLFWwindow* window,int key, int modifiers)
 }
 
 
+IGL_INLINE void ImGuiMenu::DrawAnimationMenu(Renderer* rndr, igl::opengl::glfw::Viewer& viewer, std::vector<igl::opengl::Camera*>& camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow)
+{
+    bool* p_open = NULL;
+    static bool no_titlebar = false;
+    static bool no_scrollbar = false;
+    static bool no_menu = true;
+    static bool no_move = false;
+    static bool no_resize = false;
+    static bool no_collapse = false;
+    static bool no_close = false;
+    static bool no_nav = false;
+    static bool no_background = false;
+    static bool no_bring_to_front = false;
 
-IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::Viewer &viewer, std::vector<igl::opengl::Camera*> &camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow)
+    ImGuiWindowFlags window_flags = 0;
+    if (no_titlebar)        window_flags |= ImGuiWindowFlags_NoTitleBar;
+    if (no_scrollbar)       window_flags |= ImGuiWindowFlags_NoScrollbar;
+    if (!no_menu)           window_flags |= ImGuiWindowFlags_MenuBar;
+    if (no_move)            window_flags |= ImGuiWindowFlags_NoMove;
+    if (no_resize)          window_flags |= ImGuiWindowFlags_NoResize;
+    if (no_collapse)        window_flags |= ImGuiWindowFlags_NoCollapse;
+    if (no_nav)             window_flags |= ImGuiWindowFlags_NoNav;
+    if (no_background)      window_flags |= ImGuiWindowFlags_NoBackground;
+    if (no_bring_to_front)  window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+    ImGui::Begin(
+        "Viewer", p_open,
+        window_flags
+    );
+
+    ImGui::SetWindowPos(ImVec2((float)0, (float)0), ImGuiCond_Always);
+    ImGui::SetWindowSize(ImVec2((float)0, (float)0), ImGuiCond_Always);
+    ImGui::End();
+    no_move = true;
+    no_resize = true;
+    ImGui::Begin(
+        "Viewer", p_open,
+        window_flags
+    );
+
+    float w = ImGui::GetContentRegionAvailWidth();
+    float p = ImGui::GetStyle().FramePadding.x;
+    ImVec2 halfWidthVec2((w - p) / 2.f, 0);
+    ImVec2 fullWidthVec2(-1, 0);
+
+    Project* project = dynamic_cast<Project*>(&viewer);
+    ImGui::PushItemWidth(100 * menu_scaling());
+    if (project->IsActive()) {
+        if (ImGui::Button("Pause animation", fullWidthVec2)) {
+            project->PauseAnimation();
+        }
+    }
+    else {
+        if (ImGui::Button("Resume animation", fullWidthVec2)) {
+            project->ResumeAnimation();
+        }
+    }
+    if (ImGui::Button("Stop animation", fullWidthVec2)) {
+        project->StopAnimation();
+    }
+    ImGui::PopItemWidth();
+    ImGui::End();
+}
+
+
+IGL_INLINE void ImGuiMenu::DrawDesignMenu(Renderer *rndr, igl::opengl::glfw::Viewer &viewer, std::vector<igl::opengl::Camera*> &camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow)
 {
     bool* p_open = NULL;
     static bool no_titlebar = false;
@@ -232,6 +295,9 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
   }
   if (project && ImGui::CollapsingHeader("Animations", ImGuiTreeNodeFlags_DefaultOpen))
   {
+      if (ImGui::Button("Start Animation", fullWidthVec2)) {
+          project->EnterAnimation();
+      }
       float animationTime = (float) project->CalcAnimationTime();
       float currentAnimationTime = (float) project->GetCurrentAnimationTimeInSeconds();
       if (animationTime > 0) {
@@ -332,12 +398,6 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       std::string filePath = igl::file_dialog_open();
       project->AddShapeFromMenu(filePath);
     }
-    //ImGui::SameLine(0, p);
-    //if (ImGui::Button("Save##Mesh", halfWidthVec2))
-    //{
-    //  viewer.open_dialog_save_mesh();
-    //}
-
     if (project)
     {
         ImGui::PushItemWidth(100 * menu_scaling());
@@ -547,43 +607,6 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
           }
       }
   }
-
-  // Viewing options
-//  if (ImGui::CollapsingHeader("Viewing Options"))
-//  {
-//    if (ImGui::Button("Center object", ImVec2(-1, 0)))
-//    {
-//      std::cout << "not implemented yet" << std::endl;
-////      core[1].align_camera_center(viewer.data().V, viewer.data().F); TODO: add function like this to camera
-//    }
-//    //if (ImGui::Button("Snap canonical view", ImVec2(-1, 0)))
-//    //{
-//    //  core[1].snap_to_canonical_quaternion();
-//    //}
-//
-//    // Zoom
-//    ImGui::PushItemWidth(80 * menu_scaling());
-//    if (camera[0]->_ortho)
-//      ImGui::DragFloat("Zoom", &(camera[0]->length), 0.05f, 0.1f, 20.0f);
-//    else
-//      ImGui::DragFloat("Fov", &(camera[0]->data.fov), 0.05f, 30.0f, 90.0f);
-//
-//      // Select rotation type
-//    static Eigen::Quaternionf trackball_angle = Eigen::Quaternionf::Identity();
-//    static bool orthographic = true;
-//
-//    // Orthographic view
-//    ImGui::Checkbox("Orthographic view", &(camera[0]->_ortho));
-//    if (camera[0]->_ortho) {
-//        camera[0]->SetProjection(0,camera[0]->GetRelationWH());
-//      }
-//    else {
-//        camera[0]->SetProjection(camera[0]->GetAngle() > 0 ? camera[0]->GetAngle() : 45,camera[0]->GetRelationWH());
-//      }
-//
-//      ImGui::PopItemWidth();
-//  }
-
   if (ImGui::CollapsingHeader("Cubemap", ImGuiTreeNodeFlags_DefaultOpen))
   {
       if (ImGui::Button("Change image", fullWidthVec2))
@@ -636,6 +659,41 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
 
   //}
   ImGui::End();
+}
+
+
+IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer* rndr, igl::opengl::glfw::Viewer& viewer, std::vector<igl::opengl::Camera*>& camera, igl::opengl::CameraData cameraData, Eigen::Vector4i& viewWindow)
+{
+    bool* p_open = NULL;
+    static bool no_titlebar = false;
+    static bool no_scrollbar = false;
+    static bool no_menu = true;
+    static bool no_move = false;
+    static bool no_resize = false;
+    static bool no_collapse = false;
+    static bool no_close = false;
+    static bool no_nav = false;
+    static bool no_background = false;
+    static bool no_bring_to_front = false;
+
+    ImGuiWindowFlags window_flags = 0;
+    if (no_titlebar)        window_flags |= ImGuiWindowFlags_NoTitleBar;
+    if (no_scrollbar)       window_flags |= ImGuiWindowFlags_NoScrollbar;
+    if (!no_menu)           window_flags |= ImGuiWindowFlags_MenuBar;
+    if (no_move)            window_flags |= ImGuiWindowFlags_NoMove;
+    if (no_resize)          window_flags |= ImGuiWindowFlags_NoResize;
+    if (no_collapse)        window_flags |= ImGuiWindowFlags_NoCollapse;
+    if (no_nav)             window_flags |= ImGuiWindowFlags_NoNav;
+    if (no_background)      window_flags |= ImGuiWindowFlags_NoBackground;
+    if (no_bring_to_front)  window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+    Project* project = dynamic_cast<Project*>(&viewer);
+    if (project->IsDesignMode()) {
+        DrawDesignMenu(rndr, viewer, camera, cameraData, viewWindow);
+    }
+    else {
+        DrawAnimationMenu(rndr, viewer, camera, cameraData, viewWindow);
+    }
+
 }
 
 

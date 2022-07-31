@@ -185,7 +185,13 @@ public:
 	Eigen::Vector3d GetMeshPosition(int meshIndex) override;
 	Eigen::Matrix3d GetMeshLinear(int meshIndex) override;
 	double CalcAnimationTime();
-
+	AnimationCameraData* GetCameraForAnimationTime(double t);
+	void EnterAnimation();
+	void StopAnimation();
+	void PauseAnimation() { isActive = false; }
+	void ResumeAnimation() { isActive = true; }
+	bool IsActive() { return isActive; }
+	bool IsDesignMode() { return isInDesignMode; }
 private:
 	int shaderIndex_cubemap;
 	int shaderIndex_basic;
@@ -197,6 +203,7 @@ private:
 	int leftSection;
 	int rightSection;
 	int editBezierSection;
+	int animationSectionIndex;
 	int designCameraIndex;
 	int editBezierCameraIndex;
 	igl::opengl::CameraData cameraData;
