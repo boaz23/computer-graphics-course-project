@@ -44,7 +44,9 @@ Project::Project(igl::opengl::CameraData camera) :
 	currentSelectedBezierSegment{-1},
 	bezierCurvePlane{-1},
 	animationDirectionMode{false},
-	currentTime{0.0}
+	currentTime{0.0},
+	animationSectionIndex{-1},
+	defaultAnimationCamera{-1}
 {
 	data_list.front() = new ProjectMesh(0, false, false, false);
 	data_list.front()->id = 0;
@@ -66,6 +68,9 @@ void Project::InitRenderer() {
 	editBezierSection = renderer->AddSection(
 		DISPLAY_WIDTH / 2, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT,
 		0, false, false, false, false, false);
+	animationSectionIndex = renderer->AddSection(
+		0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+		0, false, false, true, true, false);
 	WindowSection& bezierSection = renderer->GetSection(editBezierSection);
 	bezierSection.ClearDrawFlag(bezierSection.GetSceneLayerIndex(), 0, depthTest | blend);
 	designCameraIndex = renderer->AddCamera(DefaultCameraPositon, cameraData);
@@ -237,8 +242,15 @@ void Project::Animate()
 {
 	if (isActive)
 	{
-		if (selected_data_index > 0)
-			data()->MyRotate(Eigen::Vector3d(0, 1, 0), 0.01);
+		currentTime += ANIMATION_DELTA;
+		double secondsTime = currentTime / 0.3;
+		if (secondsTime > CalcAnimationTime()) {
+			currentTime = 0.0;
+			secondsTime = 0.0;
+		}
+		AnimationCameraData* cameraToUse = GetCameraForAnimationTime(secondsTime);
+		WindowSection& section = renderer->GetSection(animationSectionIndex);
+		section.SetCamera(cameraToUse->cameraIndex);
 	}
 }
 
@@ -298,6 +310,7 @@ int Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camera
 			newV.row(i) = v;
 		}
 		shape->set_vertices(newV);
+		shape->RemoveSectionLayers({ {animationSectionIndex, renderer->GetSection(animationSectionIndex).GetSceneLayerIndex()} });
 		break;
 	}
 	return cameraIndex;
@@ -533,9 +546,6 @@ void Project::TryPickSegment(const Eigen::Matrix4d& PV, const Eigen::Vector4i& v
 	currentSelectedBezierSegment = foundLineIndex == -1 ? -1 : GetCurrentBezierMesh()->GetCachedMap().row(foundLineIndex)(0);
 	SetControlPointsPosition();
 	DrawBezierCurves();
-	//float denom = Eigen::Vector3d::UnitZ().dot(dirToScene);
-	//float t = (-sourcePointScene).dot(Eigen::Vector3d::UnitZ()) / denom;
-	//Eigen::Vector3d intersectionPoint = sourcePointScene + t * dirToScene;
 }
 
 void Project::ToggleSplitMode() {
@@ -951,4 +961,59 @@ double Project::CalcAnimationTime() {
 		currentMaxTime = std::max(currentMaxTime, projectMesh->CalcAnimationTime());
 	}
 	return currentMaxTime;
+}
+
+AnimationCameraData* Project::GetCameraForAnimationTime(double t) {
+	double currentT = 0.0;
+	AnimationCameraData* toRet = NULL;
+	for (AnimationSegment* animationSegment : segments) {
+		currentT += animationSegment->GetDuration();
+		if (currentT >= t) {
+			toRet = dynamic_cast<AnimationCameraData*>(const_cast<igl::opengl::ViewerData*>
+				(data_list[camerasToMesh[animationSegment->GetCameraIndex()]]));
+			break;
+		}
+	}
+	if (toRet == NULL) {
+		toRet = dynamic_cast<AnimationCameraData*>(const_cast<igl::opengl::ViewerData*>(data_list[camerasToMesh[defaultAnimationCamera]]));
+	}
+	return toRet;
+}
+
+void Project::EnterAnimation() {
+	currentTime = 0.0;
+	if (splitMode) {
+		renderer->DeactivateSection(leftSection);
+		if (editBezierMode) {
+			renderer->DeactivateSection(editBezierSection);
+		}
+		else {
+			renderer->DeactivateSection(rightSection);
+		}
+	}
+	else {
+		renderer->DeactivateSection(fullScreenSection);
+	}
+	renderer->ActivateSection(animationSectionIndex);
+	isActive = true;
+	isInDesignMode = false;
+}
+
+void Project::StopAnimation() {
+	currentTime = 0.0;
+	if (splitMode) {
+		renderer->ActivateSection(leftSection);
+		if (editBezierMode) {
+			renderer->ActivateSection(editBezierSection);
+		}
+		else {
+			renderer->ActivateSection(rightSection);
+		}
+	}
+	else {
+		renderer->ActivateSection(fullScreenSection);
+	}
+	renderer->DeactivateSection(animationSectionIndex);
+	isActive = false;
+	isInDesignMode = true;
 }

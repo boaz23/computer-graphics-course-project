@@ -16,6 +16,9 @@
 		bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
+		if (!scn->IsDesignMode()) {
+			return;
+		}
 		double x2, y2;
 		glfwGetCursorPos(window, &x2, &y2);
 		if (action == GLFW_PRESS)
@@ -61,6 +64,9 @@
 	{
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
+		if (!scn->IsDesignMode()) {
+			return;
+		}
 		rndr->UpdateZpos((int)yoffset);
 		// TODO zoom on object 
 		rndr->MouseProccessing(GLFW_MOUSE_BUTTON_MIDDLE);
@@ -74,6 +80,9 @@
 		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
+		if (!scn->IsDesignMode()) {
+			return;
+		}
 
 		rndr->UpdatePosition((float)xpos,(float)ypos);
 
@@ -117,6 +126,9 @@
 		}
 		Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 		Project* scn = (Project*)rndr->GetScene();
+		if (!scn->IsDesignMode()) {
+			return;
+		}
 		const WindowSection &section = rndr->GetCurrentSection();
 		int currentCamera = section.GetCamera();
 		const igl::opengl::Camera &camera = rndr->GetCamera(currentCamera);

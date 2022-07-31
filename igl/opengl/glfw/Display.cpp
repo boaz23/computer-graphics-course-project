@@ -131,7 +131,7 @@ bool Display::launch_rendering(bool loop)
 			glfwPollEvents();
 			// In microseconds
 			double duration = 1000000. * (igl::get_seconds() - tic);
-			const double min_duration = 1000000. / 144.f;
+			const double min_duration = 1000000. / 60.f;
 			if (duration < min_duration)
 			{
 				std::this_thread::sleep_for(std::chrono::microseconds((int)(min_duration - duration)));
