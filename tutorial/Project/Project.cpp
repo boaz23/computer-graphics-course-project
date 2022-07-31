@@ -7,6 +7,7 @@
 #include <math.h>
 #include <limits>
 
+static const Eigen::Vector3d DefaultCameraPositon = Eigen::Vector3d(0.0, 0.0, 10.0);
 
 static void printMat(const Eigen::Matrix4d& mat)
 {
@@ -67,11 +68,11 @@ void Project::InitRenderer() {
 		0, false, false, false, false, false);
 	WindowSection& bezierSection = renderer->GetSection(editBezierSection);
 	bezierSection.ClearDrawFlag(bezierSection.GetSceneLayerIndex(), 0, depthTest | blend);
-	designCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), cameraData);
+	designCameraIndex = renderer->AddCamera(DefaultCameraPositon, cameraData);
 	// bezier edit camera
 	// TODO aspect ratio not realy matter
 	igl::opengl::CameraData editBezierCameraData(45, 0.75, NEAR, FAR);
-	editBezierCameraIndex = renderer->AddCamera(Eigen::Vector3d(0.0, 0.0, 10.0), editBezierCameraData);
+	editBezierCameraIndex = renderer->AddCamera(DefaultCameraPositon, editBezierCameraData);
 	// Default full screen
 	renderer->ActivateSection(fullScreenSection);
 	renderer->GetSection(editBezierSection).SetCamera(editBezierCameraIndex);
@@ -232,16 +233,8 @@ void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, c
 	s->Unbind();
 }
 
-
-void Project::WhenRotate()
+void Project::Animate()
 {
-}
-
-void Project::WhenTranslate()
-{
-}
-
-void Project::Animate() {
 	if (isActive)
 	{
 		if (selected_data_index > 0)
@@ -356,14 +349,23 @@ void Project::MoveCamera(std::function<void(Movable &)> transform)
 {
 	WindowSection &section = renderer->GetCurrentSection();
 	int cameraIndex = section.GetCamera();
-	auto meshIt = camerasToMesh.find(cameraIndex);
 	igl::opengl::Camera &camera = renderer->GetCamera(cameraIndex);
+	auto meshIt = camerasToMesh.find(cameraIndex);
 	igl::opengl::ViewerData *shape = meshIt == camerasToMesh.end() ? nullptr : data_list[meshIt->second];
 	if (shape != nullptr)
 	{
 		transform(*shape);
 	}
 	transform(camera);
+}
+
+void Project::ResetActiveCamera()
+{
+	WindowSection &section = renderer->GetCurrentSection();
+	int cameraIndex = section.GetCamera();
+	igl::opengl::Camera &camera = renderer->GetCamera(cameraIndex);
+	camera.ZeroTrans();
+	camera.MyTranslate(DefaultCameraPositon, true);
 }
 
 void Project::Transform(Movable &movable, std::function<void(Movable &)> transform)
@@ -647,29 +649,6 @@ bool Project::AddPickedShapes
 	return isFound;
 }
 
-
-void Project::WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy)
-{
-	ProjectMesh& mesh = *GetProjectMeshByIndex(selected_data_index);
-	if (renderer->GetCurrentSection().IsRotationAllowed() && animationDirectionMode && mesh.AllowAnimations()) {
-		AnimatedMesh* animatedMesh = dynamic_cast<AnimatedMesh*>(const_cast<igl::opengl::ViewerData*>
-			(data()));
-		animatedMesh->RotateDirection(preMat, dx, dy);
-		return;
-	}
-	Eigen::Vector4d xRotation = preMat.transpose() * Eigen::Vector4d(0, 1, 0, 0);
-	Eigen::Vector4d yRotation = preMat.transpose() * Eigen::Vector4d(1, 0, 0, 0);
-	if (renderer->GetCurrentSection().IsRotationAllowed()) {
-		Transform(GetMovableTransformee(), [&xRotation, &dx, &yRotation, &dy](Movable& movable)
-		{
-			movable.RotateInSystem(xRotation.head(3), dx);
-			movable.RotateInSystem(yRotation.head(3), dy);
-		});
-
-	}
-}
-
-
 igl::opengl::glfw::ViewerDataCreateFunc Project::GetStaticDataCreator(int layer, bool isPicking, bool outline, bool allowTransparent, Eigen::Vector3d color) {
 	return [this, layer, isPicking, outline, allowTransparent, color]()
 	{
@@ -683,28 +662,26 @@ igl::opengl::glfw::ViewerDataCreateFunc Project::GetAnimatedDataCreator(int laye
 	};
 }
 
-void Project::RotateCamera(double dx, double dy) {
-	if (renderer->GetCurrentSection().IsRotationAllowed()) {
-		MoveCamera([&dx, &dy](Movable& movable)
-		{
-			movable.RotateInSystem(Eigen::Vector3d(0, 1, 0), dx);
-			movable.RotateInSystem(Eigen::Vector3d(1, 0, 0), dy);
-		});
+void Project::TranslateCamera(Eigen::Vector3d d) {
+	WindowSection &section = renderer->GetCurrentSection();
+	int cameraIndex = section.GetCamera();
+	igl::opengl::Camera &camera = renderer->GetCamera(cameraIndex);
+
+	if (renderer->GetCurrentSectionIndex() == GetBezierSectionIndex())
+	{
+		double currentTranslation = camera.GetPosition().z();
+		d.z() = std::max(1 - currentTranslation, d.z());
 	}
+
+	Viewer::TranslateCamera(camera, d);
 }
 
-void Project::TranslateCamera(double dx, double dy, double dz) {
-	WindowSection& section = renderer->GetCurrentSection();
-	int cameraIndex = section.GetCamera();
-	if (cameraIndex == editBezierCameraIndex) {
-		igl::opengl::Camera& camera = renderer->GetCamera(cameraIndex);
-		double currentTranslation = MakeCameraTransScaled(cameraIndex).col(3).z();
-		dz = std::max(1 - currentTranslation, dz);
-	}
-	MoveCamera([dx, dy, dz](Movable& movable)
+void Project::RotateCamera(const std::vector<std::pair<Eigen::Vector3d, double>> &angledAxes)
+{
+	if (renderer->GetCurrentSection().IsRotationAllowed())
 	{
-		movable.TranslateInSystem(movable.GetRotation(), Eigen::Vector3d(dx, dy, dz));
-	});
+		Viewer::RotateCamera(angledAxes);
+	}
 }
 
 void Project::WhenScroll(const Eigen::Matrix4d& preMat, float dy) {
@@ -728,6 +705,21 @@ void Project::WhenTranslate(const Eigen::Matrix4d& preMat, float dx, float dy)
 		if (currentEditedMesh != NULL) {
 			currentEditedMesh->MoveControlPoint(currentSelectedBezierSegment, controlPointMesh->GetPointNumber(), (rot.transpose() * Eigen::Vector3d(dx, dy, 0)));
 			DrawBezierCurves();
+		}
+	}
+}
+
+void Project::WhenRotate(const Eigen::Matrix4d &preMat, float dx, float dy)
+{
+	if (renderer->GetCurrentSection().IsRotationAllowed())
+	{
+		if (animationDirectionMode && GetProjectMeshByIndex(selected_data_index)->AllowAnimations()) {
+			AnimatedMesh* animatedMesh = dynamic_cast<AnimatedMesh*>(const_cast<igl::opengl::ViewerData*>
+				(data()));
+			animatedMesh->RotateDirection(preMat, dx, dy);
+		}
+		else {
+			Viewer::WhenRotate(preMat, dx, dy);
 		}
 	}
 }

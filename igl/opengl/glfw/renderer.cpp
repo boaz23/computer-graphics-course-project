@@ -4,6 +4,7 @@
 #include <igl/unproject_onto_mesh.h>
 #include <utility>
 #include "igl/look_at.h"
+#include "igl/PI.h"
 
 //#include <Eigen/Dense>
 
@@ -12,7 +13,7 @@
 #endif
 
 
-Renderer::Renderer(igl::opengl::CameraData cameraData) : depths{}, manyPickCameraTransformation{ Eigen::Matrix4d::Identity() }
+Renderer::Renderer(igl::opengl::CameraData cameraData) : depths{}, manyPickCameraTransformation{ Eigen::Matrix4d::Identity() }, shouldAreaSelectPick{true}
 {
 
     callback_init = nullptr;
@@ -329,7 +330,7 @@ void Renderer::RecalculateDepths()
 //    ActionDraw(0);
 //}
 
-void Renderer::PickMany(int x, int y)
+void Renderer::AreaSelect(int x, int y)
 {
     // Changed: pick allways
     WindowSection& section = *windowSections[currentSection];
@@ -341,23 +342,51 @@ void Renderer::PickMany(int x, int y)
     int yMin = viewportSize.w() - std::max(localPressY, localReleaseY);
     int xMax = std::max(xWhenPress, xold) - viewportSize.x();
     int yMax = viewportSize.w() - std::min(localPressY, localReleaseY);
-    UnPick();
-    Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
-    Eigen::Matrix4d ViewInv = scn->MakeCameraTransScaled(section.GetCamera());
-    Eigen::Matrix4d View = ViewInv.inverse();
-    bool hasAny = scn->AddPickedShapes
-    (
-        Proj*View,
-        viewportSize, currentSection, section.GetSceneLayerIndex(),
-        xMin, xMax, yMin, yMax,
-        GetStencilTestLayersIndexes(),
-        depths
-    );
-    if (hasAny)
+
+    if (shouldAreaSelectPick)
     {
-        isMany = true;
-        isPicked = true;
-        manyPickCameraTransformation = ViewInv;
+        UnPick();
+        Eigen::Matrix4d Proj = currentCamera.GetViewProjection(viewportSize(2) * 1.0 / viewportSize(3)).cast<double>();
+        Eigen::Matrix4d ViewInv = scn->MakeCameraTransScaled(section.GetCamera());
+        Eigen::Matrix4d View = ViewInv.inverse();
+        bool hasAny = scn->AddPickedShapes
+        (
+            Proj*View,
+            viewportSize, currentSection, section.GetSceneLayerIndex(),
+            xMin, xMax, yMin, yMax,
+            GetStencilTestLayersIndexes(),
+            depths
+        );
+        if (hasAny)
+        {
+            isMany = true;
+            isPicked = true;
+            manyPickCameraTransformation = ViewInv;
+        }
+    }
+    else
+    {
+        double fH = tan(currentCamera.GetAngle() / 360.0 * igl::PI) * currentCamera.GetNear();
+        double fW = fH * ((double)viewportSize.z() / (double)viewportSize.w());
+        double R = 2*fW / viewportSize.z();
+        Eigen::Vector2i C{ (xMin+xMax)/2, (yMin+yMax)/2 };
+        Eigen::Vector2i C2{ C.x() - (viewportSize.z()/2) , C.y() - (viewportSize.w()/2) }; // Relative to center of the screen
+        Eigen::Matrix3d linear = currentCamera.GetLinear();
+        Eigen::Vector3d position = currentCamera.GetPosition();
+        Eigen::Vector3d forward = -linear.col(2).normalized();
+        Eigen::Vector3d up = linear.col(1).normalized();
+        Eigen::Vector3d right = linear.col(0).normalized();
+        Eigen::Vector3d Pc = position + forward*currentCamera.GetNear();
+        Eigen::Vector3d P = Pc + C2.x()*R*right + C2.y()*R*up;
+        Eigen::Vector3d v = P - position;
+        Eigen::Vector3d vNoY{ v.x(), 0, v.z() }, vNoX{ 0, v.y(), v.z() };
+        vNoX.normalize();
+        vNoY.normalize();
+        double rotX = asin(forward.cross(vNoX).norm()) * (C2.x() >= 0 ? -1 : 1);
+        double rotY = asin(forward.cross(vNoY).norm()) * (C2.y() >= 0 ? 1 : -1);
+        scn->RotateCamera(rotX, rotY);
+        double ratio = (double)viewportSize.z() / (xMax-xMin);
+        scn->TranslateCamera(0.5 * ratio * v.normalized());
     }
 }
 

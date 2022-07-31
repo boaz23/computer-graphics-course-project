@@ -315,6 +315,13 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
     {
         // Nothing to do for now
     }
+    if (ImGui::Checkbox("Area selection picks", &rndr->shouldAreaSelectPick))
+    {
+    }
+    if (ImGui::Button("Reset active camera", fullWidthVec2))
+    {
+        project->ResetActiveCamera();
+    }
   }
 
   // Mesh

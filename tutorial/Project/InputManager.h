@@ -45,7 +45,7 @@
 			Renderer* rndr = (Renderer*)glfwGetWindowUserPointer(window);
 			// if exiting select many mode apply selection
 			if (rndr->isInSelectMode()) {
-				rndr->PickMany((int)x2, (int)y2);
+				rndr->AreaSelect((int)x2, (int)y2);
 				rndr->finishSelect();
 			}
 			else
@@ -97,31 +97,16 @@
 		rndr->resize(window,width,height);
 	}
 
-	template<bool axisDir> void RotateCamera(Project *scn, const WindowSection &section, const Eigen::Vector3d &axis, double d = (1.0 / 16.0) * (axisDir ? 1 : -1))
+	template<bool axisDir> void RotateCamera(Project *scn, const Eigen::Vector3d &axis, double d = (1.0 / 16.0) * (axisDir ? 1 : -1))
 	{
-		if (section.IsRotationAllowed())
-		{
-			scn->MoveCamera([&axis, d](Movable &movable)
-			{
-				movable.MyRotate(axis, d);
-			});
-		}
+		scn->RotateCamera({ std::pair<Eigen::Vector3d, double>{axis, d} });
 	}
 
-	template<bool axisDir> void TranslateCamera(Project *scn, const Movable &movable, Eigen::Index axis, double d = 0.25 * (axisDir ? 1 : -1))
+	template<bool axisDir> void TranslateCamera(Project *scn, Eigen::Index axis, double d = 0.25 * (axisDir ? 1 : -1))
 	{
-		Eigen::Vector3d amt = d * movable.GetLinear().col(axis).normalized();
-		WindowSection& section = scn->renderer->GetCurrentSection();
-		int cameraIndex = section.GetCamera();
-		if (scn->renderer->GetCurrentSectionIndex() == scn->GetBezierSectionIndex()) {
-			igl::opengl::Camera& camera = scn->renderer->GetCamera(cameraIndex);
-			double currentTranslation = camera.MakeTransScaled().col(3).z();
-			amt.z() = std::max(1 - currentTranslation, amt.z());
-		}
-		scn->MoveCamera([&amt](Movable &movable)
-		{
-			movable.MyTranslate(amt, 1);
-		});
+		Eigen::Vector3d dt = Eigen::Vector3d::Zero();
+		dt(axis) = d;
+		scn->TranslateCamera(dt);
 	}
 
 	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -151,41 +136,41 @@
 
 				// TODO: transformation in camera plane
 			case GLFW_KEY_UP:
-				RotateCamera<true>(scn, section, Eigen::Vector3d(1, 0, 0));
+				RotateCamera<true>(scn, Eigen::Vector3d(1, 0, 0));
 				break;
 			case GLFW_KEY_DOWN:
-				RotateCamera<false>(scn, section, Eigen::Vector3d(1, 0, 0));
+				RotateCamera<false>(scn, Eigen::Vector3d(1, 0, 0));
 				break;
 			case GLFW_KEY_LEFT:
-				RotateCamera<true>(scn, section, Eigen::Vector3d(0, 1, 0));
+				RotateCamera<true>(scn, Eigen::Vector3d(0, 1, 0));
 				break;
 			case GLFW_KEY_RIGHT:
-				RotateCamera<false>(scn, section, Eigen::Vector3d(0, 1, 0));
+				RotateCamera<false>(scn, Eigen::Vector3d(0, 1, 0));
 				break;
 			case GLFW_KEY_KP_3:
-				RotateCamera<true>(scn, section, Eigen::Vector3d(0, 0, 1));
+				RotateCamera<true>(scn, Eigen::Vector3d(0, 0, 1));
 				break;
 			case GLFW_KEY_KP_1:
-				RotateCamera<false>(scn, section, Eigen::Vector3d(0, 0, 1));
+				RotateCamera<false>(scn, Eigen::Vector3d(0, 0, 1));
 				break;
 
-			case GLFW_KEY_Q:
-				TranslateCamera<false>(scn, camera, 1);
-				break;
-			case GLFW_KEY_E:
-				TranslateCamera<true>(scn, camera, 1);
+			case GLFW_KEY_D:
+				TranslateCamera<true>(scn, 0);
 				break;
 			case GLFW_KEY_A:
-				TranslateCamera<false>(scn, camera, 0);
+				TranslateCamera<false>(scn, 0);
 				break;
-			case GLFW_KEY_D:
-				TranslateCamera<true>(scn, camera, 0);
+			case GLFW_KEY_E:
+				TranslateCamera<true>(scn, 1);
+				break;
+			case GLFW_KEY_Q:
+				TranslateCamera<false>(scn, 1);
 				break;
 			case GLFW_KEY_S:
-				TranslateCamera<true>(scn, camera, 2);
+				TranslateCamera<true>(scn, 2);
 				break;
 			case GLFW_KEY_W:
-				TranslateCamera<false>(scn, camera, 2);
+				TranslateCamera<false>(scn, 2);
 				break;
 
 			case GLFW_KEY_O:

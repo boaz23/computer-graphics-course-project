@@ -33,24 +33,24 @@ IGL_INLINE igl::opengl::Camera::Camera():Camera(CameraData(45.0f, 1.0f, 1.0f, 10
 {
 }
 
-IGL_INLINE void igl::opengl::Camera::SetProjection(float fov, float relationWH)
-{
-    if( fov>0)
-    {
-        float fH = tan(fov / 360.0 * igl::PI) * data.zNear;
-        float fW = fH * relationWH;
-        frustum(-fW, fW, -fH, fH, data.zNear, data.zFar, _projection);
-        data.fov = fov;
-        _ortho = false;
-    }
-    else{
-        float camera_view_angle = 45.0;
-        float h = tan(camera_view_angle/360.0 * igl::PI) * (length);
-        ortho(-h*relationWH, h*relationWH, -h, h, data.zNear, data.zFar, _projection);
-        _ortho = true;
-    }
-    data.relationWH = relationWH;
-}
+//IGL_INLINE void igl::opengl::Camera::SetProjection(float fov, float relationWH)
+//{
+//    if( fov>0)
+//    {
+//        float fH = tan(fov / 360.0 * igl::PI) * data.zNear;
+//        float fW = fH * relationWH;
+//        frustum(-fW, fW, -fH, fH, data.zNear, data.zFar, _projection);
+//        data.fov = fov;
+//        _ortho = false;
+//    }
+//    else{
+//        float camera_view_angle = 45.0;
+//        float h = tan(camera_view_angle/360.0 * igl::PI) * (length);
+//        ortho(-h*relationWH, h*relationWH, -h, h, data.zNear, data.zFar, _projection);
+//        _ortho = true;
+//    }
+//    data.relationWH = relationWH;
+//}
 
 IGL_INLINE Eigen::Matrix4f igl::opengl::Camera::CalcProjection(float relationWH) const
 {
@@ -61,15 +61,14 @@ IGL_INLINE Eigen::Matrix4f igl::opengl::Camera::CalcProjection(float relationWH)
         float fW = fH * relationWH;
         frustum(-fW, fW, -fH, fH, data.zNear, data.zFar, toRet);
     }
-    else {
+    else
+    {
         float camera_view_angle = 45.0;
         float h = tan(camera_view_angle / 360.0 * igl::PI) * (length);
         ortho(-h * relationWH, h * relationWH, -h, h, data.zNear, data.zFar, toRet);
     }
     return toRet;
 }
-
-
 
 IGL_INLINE float igl::opengl::Camera::CalcMoveCoeff(float depth,int size) const
 {

@@ -49,12 +49,12 @@ public:
 	//	Project(float angle,float relationWH,float zNear, float zFar);
 	void Init();
 	void Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx);
-	void WhenRotate();
-	void WhenTranslate();
 	void Animate() override;
 	int AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind);
 	void ChangeCameraIndex_ByDelta(int delta);
 	void MoveCamera(std::function<void(Movable&)> transform);
+	void ResetActiveCamera();
+
 	void InitRenderer();
 	void InitBezierSection();
 	IGL_INLINE bool EffectiveDesignModeView() const { return isInDesignMode && isDesignModeView; }
@@ -68,8 +68,6 @@ public:
 	IGL_INLINE int GetPickingShaderIndex() override { return pickingShaderIndex; }
 	ProjectMesh* GetProjectMeshByIndex(int index);
 	void ToggleSplitMode();
-	void WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy) override;
-	void RotateCamera(double dx, double dy) override;
 
 	void ToggleEditBezierMode();
 	inline bool IsSplitMode() { return splitMode; };
@@ -83,9 +81,12 @@ public:
 	double GetShapeAlpha(int index) override {
 		return GetProjectMeshByIndex(index)->GetAlpha();
 	};
-	void TranslateCamera(double dx, double dy, double dz);
-	void WhenScroll(const Eigen::Matrix4d& preMat, float dy) override;
-	void WhenTranslate(const Eigen::Matrix4d& preMat, float dx, float dy) override;
+
+	void TranslateCamera(Eigen::Vector3d d) override;
+	void RotateCamera(const std::vector<std::pair<Eigen::Vector3d, double>> &angledAxes) override;
+	void WhenTranslate(const Eigen::Matrix4d &preMat, float dx, float dy) override;
+	void WhenRotate(const Eigen::Matrix4d &preMat, float dx, float dy) override;
+	void WhenScroll(const Eigen::Matrix4d &preMat, float dy) override;
 	bool ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex, int meshIndex) const override;
 	void Transform(Movable& movable, std::function<void(Movable&)> transform) override;
 	void InitScene();
