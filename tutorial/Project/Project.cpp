@@ -364,8 +364,11 @@ void Project::ResetActiveCamera()
 	WindowSection &section = renderer->GetCurrentSection();
 	int cameraIndex = section.GetCamera();
 	igl::opengl::Camera &camera = renderer->GetCamera(cameraIndex);
-	camera.ZeroTrans();
-	camera.MyTranslate(DefaultCameraPositon, true);
+	MoveCamera([](Movable &movable)
+	{
+		movable.ZeroTrans();
+		movable.MyTranslate(DefaultCameraPositon, true);
+	});
 }
 
 void Project::Transform(Movable &movable, std::function<void(Movable &)> transform)
