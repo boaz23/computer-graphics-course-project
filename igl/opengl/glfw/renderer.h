@@ -144,7 +144,7 @@ public:
 
     //void OutLine();
 
-    void PickMany(int x, int y);
+    void AreaSelect(int x, int y);
 
     void MouseProccessing(int button);
 
@@ -257,6 +257,9 @@ private:
     std::vector<double> depths;
     Eigen::Matrix4d manyPickCameraTransformation;
     // Added: added selection flag
+public:
+    bool shouldAreaSelectPick;
+private:
     bool isSelecting;
     int materialIndx2D;
     bool isPressed;
