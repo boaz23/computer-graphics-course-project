@@ -254,7 +254,7 @@ IGL_INLINE bool
     //for (unsigned int i = 0; i<plugins.size(); ++i)
     //  if (plugins[i]->post_load())
     //    return true;
-
+    data()->AfterInit();
     return true;
   }
 
@@ -456,7 +456,7 @@ IGL_INLINE bool
             }
             else
             {
-                double distanceSq = (cameraPosition - shape->GetPosition()).squaredNorm();
+                double distanceSq = (cameraPosition - GetMeshPosition(i)).squaredNorm();
                 sortedTransperantDataIndices[distanceSq] = i;
             }
         }
@@ -480,87 +480,6 @@ IGL_INLINE bool
                 sectionIndex, layerIndex,
                 flgs, property_id
             );
-        }
-    }
-
-    void Viewer::DrawShape
-    (
-        size_t shapeIndex, int shaderIndx,
-        const Eigen::Matrix4f &Normal, const Eigen::Matrix4f &Proj, const Eigen::Matrix4f &View,
-        int sectionIndex, int layerIndex,
-        unsigned int flgs, unsigned int property_id
-    )
-    {
-        ViewerData &shape = *data_list[shapeIndex];
-        if (ShouldRenderViewerData(shape, sectionIndex, layerIndex))
-        {
-            Eigen::Matrix4f Model = shape.MakeTransScale();
-
-            if (!shape.IsStatic())
-            {
-
-                Model = Normal * GetPriviousTrans(View.cast<double>(), shapeIndex).cast<float>() * Model;
-            }
-            else if (parents[shapeIndex] == -2)
-            {
-                Model = View.inverse() * Model;
-            }
-            if (flgs & 32)
-            {
-                if (flgs & 2048) {
-                    glStencilFunc(GL_ALWAYS, (int)shapeIndex + 1, 0xFF);
-                }
-                else if (flgs & 32768) {
-                    glStencilFunc(GL_NOTEQUAL, (int)shapeIndex + 1, 0xFF);
-                }
-            }
-            if (!(flgs & 65536))
-            {
-                Update(Proj, View, Model, shape.GetShader(), shapeIndex);
-                // Draw fill
-                if (shape.show_faces & property_id)
-                    shape.Draw(shaders[shape.GetShader()], true);
-                if (shape.show_lines & property_id)
-                {
-                    glLineWidth(shape.line_width);
-                    shape.Draw(shaders[shape.GetShader()], false);
-                }
-                // overlay draws
-                if (shape.show_overlay & property_id)
-                {
-                    if (shape.show_overlay_depth & property_id)
-                        glEnable(GL_DEPTH_TEST);
-                    else
-                        glDisable(GL_DEPTH_TEST);
-                    if (shape.lines.rows() > 0)
-                    {
-                        Update_overlay(Proj, View, Model, shapeIndex, false);
-                        glEnable(GL_LINE_SMOOTH);
-                        shape.Draw_overlay(overlay_shader, false);
-                    }
-                    if (shape.points.rows() > 0)
-                    {
-                        Update_overlay(Proj, View, Model, shapeIndex, true);
-                        shape.Draw_overlay_pints(overlay_point_shader, false);
-                    }
-                    glEnable(GL_DEPTH_TEST);
-                }
-            }
-            else
-            { //picking
-                // Changed: replaced hardcoded 0 with the draw shader
-                if (flgs & 16384)
-                {   //stencil
-                    Eigen::Affine3f scale_mat = Eigen::Affine3f::Identity();
-                    scale_mat.scale(Eigen::Vector3f(1.1f, 1.1f, 1.1f));
-                    Update(Proj, View, Model * scale_mat.matrix(), shaderIndx, shapeIndex);
-                }
-                else
-                {
-                    Update(Proj, View, Model, shaderIndx, shapeIndex);
-                }
-                shape.Draw(shaders[shaderIndx], true);
-            }
         }
     }
 
@@ -699,10 +618,10 @@ IGL_INLINE bool
         pShapes.clear();
     }
 
-    Eigen::Matrix4d Viewer::CalculatePosMatrix(int shapeIndex, const Eigen::Matrix4d &MVP) const
+    Eigen::Matrix4d Viewer::CalculatePosMatrix(int shapeIndex, const Eigen::Matrix4d &MVP)
     {
         const ViewerData &mesh = GetViewerDataAt(shapeIndex);
-        Eigen::Matrix4d Model = mesh.MakeTransScaled();
+        Eigen::Matrix4d Model = MakeMeshTransScaled(shapeIndex);
         Model = CalcParentsTrans(shapeIndex) * Model;
         Eigen::Matrix4d posMatrix = MVP * Model;
         return posMatrix;
@@ -724,7 +643,7 @@ IGL_INLINE bool
         return minDepth;
     }
 
-    void Viewer::AppendDepthsOfPicked(std::vector<double> &depths, const Eigen::Matrix4d &MVP) const
+    void Viewer::AppendDepthsOfPicked(std::vector<double> &depths, const Eigen::Matrix4d &MVP)
     {
         for (int pShape : pShapes)
         {
@@ -750,14 +669,14 @@ IGL_INLINE bool
         int xrel,
         int yrel,
         const igl::opengl::Camera &camera,
+        int cameraIndex,
         int viewpoertSize,
         const std::vector<double> &depths
     )
     {
-        Eigen::Matrix4d cameraMat = camera.MakeTransd();
+        Eigen::Matrix4d cameraMat = MakeCameraTransd(cameraIndex);
 
         // Changed: modified to support mesh transformations and multipicking
-        // TODO no scale?
         Eigen::Matrix4d scnMat = GetTransformationMatrix();
 
         if (button == 1)
@@ -923,7 +842,7 @@ IGL_INLINE bool
             return Model;
     }
 
-    bool Viewer::ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex) const
+    bool Viewer::ShouldRenderViewerData(const ViewerData& data, const int sectionIndex, const int layerIndex, int shapeIndex) const
     {
         return !IsLayerHidden(data.layer) && data.Is2Render(sectionIndex, layerIndex);
     }

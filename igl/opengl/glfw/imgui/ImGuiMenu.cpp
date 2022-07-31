@@ -229,7 +229,80 @@ IGL_INLINE void ImGuiMenu::draw_viewer_menu(Renderer *rndr, igl::opengl::glfw::V
       {
           project->RemoveBezierSegment();
       }
+  }
+  if (project && ImGui::CollapsingHeader("Animations", ImGuiTreeNodeFlags_DefaultOpen))
+  {
+      float animationTime = (float) project->CalcAnimationTime();
+      float currentAnimationTime = (float) project->GetCurrentAnimationTimeInSeconds();
+      if (animationTime > 0) {
+          ImGui::Text("Animation time:");
+          if (ImGui::SliderFloat("##animationTimeSlider", &currentAnimationTime, 0.0f, animationTime, "%.2f s")) {
+              project->SetCurrentAnimationTime(currentAnimationTime);
+          }
+      }
+      if (project && ImGui::Button("Toggle animation direction\nedit mode", fullWidthVec2))
+      {
+          project->ToggleAnimationRotationMode();
+      }
+      if (project && project->CanEditMeshDelay()) {
+          double delay = project->GetCurrentMeshDelay();
+          ImGui::Text("Current Mesh Delay: ");
+          if (ImGui::InputDouble("##meshdelay", &delay, 0.1, 0.1, "%.2f s")) {
+              project->SetCurrentMeshDelay(delay);
+          }
+      }
+      if (project && ImGui::CollapsingHeader("Animation Segments", ImGuiTreeNodeFlags_DefaultOpen)) {
+          std::map<int, std::string> options = project->GetAnimationCamerasNames();
+          std::vector<AnimationSegment*> segments = project->GetAnimationSegments();
+          auto createAnimationSegmentComboBoxHelper = [&project](int segmentIndex, std::map<int, std::string>& options, int currentSelectedOption) {
+              const std::string& comboPreview = options[currentSelectedOption];
+              if (ImGui::BeginCombo(("##segment" + std::to_string(segmentIndex) + "combo").c_str(), comboPreview.c_str()))
+              {
+                  bool valueChanged{ false };
+                  int selectedOption = currentSelectedOption;
+                  for (auto& option : options)
+                  {
+                      bool itemSelected = option.first == currentSelectedOption;
+                      const char* item_text = option.second.c_str();
+                      if (ImGui::Selectable(item_text, itemSelected))
+                      {
+                          valueChanged = true;
+                          selectedOption = option.first;
+                      }
+                      if (itemSelected)
+                      {
+                          ImGui::SetItemDefaultFocus();
+                      }
+                  }
+                  ImGui::EndCombo();
 
+                  if (valueChanged)
+                  {
+                      project->SetAnimationSegmentCamera(segmentIndex, selectedOption);
+                  }
+              }
+          };
+          for (int i = 0; i < (int)segments.size(); i++) {
+              ImGui::Text(("Segment " + std::to_string(i + 1) + ":").c_str());
+              ImGui::Text("Camera:   ");
+              ImGui::SameLine();
+              createAnimationSegmentComboBoxHelper(i, options, segments[i]->cameraIndex);
+              ImGui::Text("Duration: ");
+              ImGui::SameLine();
+              double duration = segments[i]->GetDuration();
+              if (ImGui::InputDouble(("##input" + std::to_string(i) + "duration").c_str(), &duration, 0.1, 0.1, "%.2f s")) {
+                  project->SetAnimationSegmentDuration(i, duration);
+              }
+              if (ImGui::Button(("Delete segment##" + std::to_string(i)).c_str(), fullWidthVec2))
+              {
+                  project->RemoveAnimationSegment(i);
+              }
+          }
+          if (project && ImGui::Button("Create new segment", fullWidthVec2))
+          {
+              project->CreateNewAnimationSegment();
+          }
+      }
   }
   if (project && ImGui::CollapsingHeader("Cameras", ImGuiTreeNodeFlags_DefaultOpen))
   {
@@ -603,13 +676,17 @@ IGL_INLINE void ImGuiMenu::draw_labels_window(Renderer* rndr, igl::opengl::glfw:
         igl::opengl::Camera& camera = rndr->GetCamera(section.GetCamera());
         Eigen::Vector4i viewport = section.GetViewportSize();
         Eigen::Matrix4d Proj = camera.CalcProjection(viewport.z() * 1.0 / viewport.w()).cast<double>();
-        Eigen::Matrix4d View = camera.MakeTransScaled().inverse() * project->MakeTransScaled();
+        Eigen::Matrix4d View = project->MakeCameraTransScaled(section.GetCamera()).inverse() * project->MakeTransScaled();
         if (section.isActive()) {
+            int index = 0;
             for (const auto& data : project->data_list)
             {
-                if (project->ShouldRenderViewerData(*data, i, section.GetSceneLayerIndex())) {
-                    draw_labels(*data, section, Proj, View * data->MakeTransScaled());
+                if (project->ShouldRenderViewerData(*data, i, section.GetSceneLayerIndex(), index)) {
+                    AnimationCameraData* mesh = dynamic_cast<AnimationCameraData*>(const_cast<igl::opengl::ViewerData*>(data));
+                    Eigen::Matrix4d Model = mesh == nullptr ? View * project->MakeMeshTransScaled(index) : View * project->MakeMeshTransd(index);
+                    draw_labels(*project, *data, section, Proj, Model);
                 }
+                index++;
             }
         }
     }
@@ -618,20 +695,33 @@ IGL_INLINE void ImGuiMenu::draw_labels_window(Renderer* rndr, igl::opengl::glfw:
     ImGui::PopStyleVar();
 }
 
-IGL_INLINE void ImGuiMenu::draw_labels(const igl::opengl::ViewerData& data, WindowSection& section, Eigen::Matrix4d Proj,
+IGL_INLINE void ImGuiMenu::draw_labels(Project& project, const igl::opengl::ViewerData& data, WindowSection& section, Eigen::Matrix4d Proj,
     Eigen::Matrix4d View)
 {
     if (data.show_custom_labels != 0 && data.labels_positions.rows() > 0)
     {
+        ProjectMesh* mesh = dynamic_cast<ProjectMesh*>(const_cast<igl::opengl::ViewerData*>(&data));
         for (int i = 0; i < data.labels_positions.rows(); ++i)
         {
+            Eigen::Matrix4d viewToSend = View;
+            // draw axis only in edit animation mode
+            if (mesh->AllowAnimations()) {
+                AnimatedMesh* animatedMesh = dynamic_cast<AnimatedMesh*>(const_cast<ProjectMesh*>(mesh));
+                if (!project.IsAnimationRotationMode() && animatedMesh->GetAxisLabelsStart() != -1 && i >= animatedMesh->GetAxisLabelsStart() && i < animatedMesh->GetAxisLabelsStart() + 3) {
+                    continue;
+                }
+                else if (project.IsAnimationRotationMode() && animatedMesh->GetAxisLabelsStart() != -1 &&
+                    i >= animatedMesh->GetAxisLabelsStart() && i < animatedMesh->GetAxisLabelsStart() + 3) {
+                    viewToSend *= animatedMesh->GetAnimationDirection();
+                }
+            }
             draw_text(
                 data.labels_positions.row(i),
                 Eigen::Vector3d(0.0, 0.0, 0.0),
                 data.labels_strings[i],
                 section,
                 Proj,
-                View,
+                viewToSend,
                 data.label_color);
         }
     }

@@ -41,7 +41,9 @@ Project::Project(igl::opengl::CameraData camera) :
 	shaderIndex_basicColor{-1},
 	currentBezierMeshIndex{-1},
 	currentSelectedBezierSegment{-1},
-	bezierCurvePlane{-1}
+	bezierCurvePlane{-1},
+	animationDirectionMode{false},
+	currentTime{0.0}
 {
 	data_list.front() = new ProjectMesh(0, false, false, false);
 	data_list.front()->id = 0;
@@ -83,14 +85,14 @@ void Project::InitBezierSection() {
 	selected_data_index = bezierPlane;
 	ShapeTransformation(zTranslate, -1.1f, 1);
 	SetShapeStatic(bezierPlane);
-	int bezierAxis = AddShape(Cube, -1, TRIANGLES, shaderIndex_basicColor,
-		{ bezierSectionSceneLayerKey }, GetStaticDataCreator(0, false, false, false,
-			Eigen::Vector3d(1.0 * 0x18 / 0xff, 1.0 * 0x17 / 0xff, 1.0 * 0x18 / 0xff)));
-	data()->show_faces = 0;
-	data()->show_lines = 0;
-	data()->show_overlay = unsigned(~0);
-	data()->add_edges((Eigen::RowVector3d::UnitX() * 60), -(Eigen::RowVector3d::UnitX() * 60), Eigen::RowVector3d(0, 0, 1));
-	data()->add_edges((Eigen::RowVector3d::UnitY() * 60), -(Eigen::RowVector3d::UnitY() * 60), Eigen::RowVector3d(0, 1, 0));
+	//int bezierAxis = AddShape(Cube, -1, TRIANGLES, shaderIndex_basicColor,
+	//	{ bezierSectionSceneLayerKey }, GetStaticDataCreator(0, false, false, false,
+	//		Eigen::Vector3d(1.0 * 0x18 / 0xff, 1.0 * 0x17 / 0xff, 1.0 * 0x18 / 0xff)));
+	//data()->show_faces = 0;
+	//data()->show_lines = 0;
+	//data()->show_overlay = unsigned(~0);
+	//data()->add_edges((Eigen::RowVector3d::UnitX() * 60), -(Eigen::RowVector3d::UnitX() * 60), Eigen::RowVector3d(0, 0, 1));
+	//data()->add_edges((Eigen::RowVector3d::UnitY() * 60), -(Eigen::RowVector3d::UnitY() * 60), Eigen::RowVector3d(0, 1, 0));
 	bezierCurvePlane = AddShape(Cube, -1, TRIANGLES, shaderIndex_basicColor,
 		{ bezierSectionSceneLayerKey }, GetStaticDataCreator(0, false, false, false,
 			Eigen::Vector3d(1.0 * 0x18 / 0xff, 1.0 * 0x17 / 0xff, 1.0 * 0x18 / 0xff)));
@@ -157,6 +159,7 @@ void Project::InitScene() {
 		GetStaticDataCreator(0, false, false, false));
 	int scissorBox = AddShape(Plane, -2, TRIANGLES, pickingShaderIndex, renderer->GetScissorsTestLayersIndexes(), 
 		GetStaticDataCreator(0, false, false, false));
+	InitBezierSection();
 	int cube1 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers, 
 		GetAnimatedDataCreator(currentEditingLayer, true, true, true));
 	int cube2 = AddShape(Cube, -1, TRIANGLES, shaderIndex_basic, sceneLayers, 
@@ -182,6 +185,8 @@ void Project::InitScene() {
 	//s = 1.f / 30.f;
 	//ShapeTransformation(scaleAll, s, 0);
 	//ShapeTransformation(yTranslate, 1.f, 0);
+	//data_list[cube1]->Hide();
+	//data_list[cube2]->Hide();
 }
 void Project::Init()
 {		
@@ -190,9 +195,9 @@ void Project::Init()
 	InitResources();
 	InitRenderer();
 	InitScene();
-	InitBezierSection();
+	//InitBezierSection();
 	// default animation camera
-	AddCamera(Eigen::Vector3d(0.0, 0.0, 0.0), cameraData, CameraKind::Animation);
+	defaultAnimationCamera = AddCamera(Eigen::Vector3d(0.0, 0.0, 0.0), cameraData, CameraKind::Animation);
 }
 
 void Project::Update(const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View, const Eigen::Matrix4f& Model, unsigned int  shaderIndx, unsigned int shapeIndx)
@@ -244,11 +249,15 @@ void Project::Animate() {
 	}
 }
 
-bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex) const
+bool Project::ShouldRenderViewerData(const igl::opengl::ViewerData& data, const int sectionIndex, const int layerIndex, int meshIndex) const
 {
+	WindowSection& section = renderer->GetSection(sectionIndex);
 	auto pAnimationCameraData = dynamic_cast<AnimationCameraData*>(const_cast<igl::opengl::ViewerData*>(&data));
-	return (pAnimationCameraData == nullptr || EffectiveDesignModeView()) &&
-		Viewer::ShouldRenderViewerData(data, sectionIndex, layerIndex);
+	// dont render the stencil layer of a camera in section if its the active camera in it
+	return (pAnimationCameraData == nullptr || 
+		(EffectiveDesignModeView() && 
+			(pAnimationCameraData->cameraIndex != section.GetCamera() || layerIndex != section.GetStencilTestLayerIndex()))) &&
+		Viewer::ShouldRenderViewerData(data, sectionIndex, layerIndex, meshIndex);
 }
 
 int Project::AddShapeFromMenu(const std::string& filePath)
@@ -264,7 +273,7 @@ int Project::AddShapeFromMenu(const std::string& filePath)
 	return shapeIndex;
 }
 
-void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
+int Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::CameraData cameraData, const CameraKind kind)
 {
 	int cameraIndex = renderer->AddCamera(position, cameraData);
 	switch (kind)
@@ -288,10 +297,17 @@ void Project::AddCamera(const Eigen::Vector3d position, const igl::opengl::Camer
 		camerasToMesh.insert(std::pair<int, int>{cameraIndex, shapeIndex});
 		const constexpr double camera_size = 1.0 / 32.0;
 		igl::opengl::ViewerData *shape = data_list[shapeIndex];
-		shape->MyScale(Eigen::Vector3d(camera_size, camera_size, camera_size));
-		shape->MyRotate(Eigen::Vector3d(0, 1, 0), EIGEN_PI / 2);
+		Eigen::MatrixXd newV;
+		newV.resize(shape->V.rows(), 3);
+		for (int i = 0; i < shape->V.rows(); i++) {
+			Eigen::Vector3d v = shape->V.row(i);
+			v *= camera_size;
+			newV.row(i) = v;
+		}
+		shape->set_vertices(newV);
 		break;
 	}
+	return cameraIndex;
 }
 
 int Project::GetMeshIndex(int cameraIndex)
@@ -443,10 +459,10 @@ float Project::Picking(const Eigen::Matrix4d& PV, const Eigen::Vector4i& viewpor
 	double closestFaceDist = -1;
 	for (int i = 0; i < data_list.size(); i++) {
 		ProjectMesh& mesh = *GetProjectMeshByIndex(i);
-		if (!ShouldRenderViewerData(mesh, sectionIndex, layerIndex) || !mesh.IsPickable()) {
+		if (!ShouldRenderViewerData(mesh, sectionIndex, layerIndex, i) || !mesh.IsPickable()) {
 			continue;
 		}
-		Eigen::Matrix4d meshView = sceneView * mesh.MakeTransScaled();
+		Eigen::Matrix4d meshView = sceneView * MakeMeshTransScaled(i);
 		Eigen::Affine3d scaleMat = Eigen::Affine3d::Identity();
 		double scaleFactor = mesh.GetPickingScaleFactor();
 		scaleMat.scale(Eigen::Vector3d(scaleFactor, scaleFactor, scaleFactor));
@@ -493,7 +509,7 @@ void Project::TryPickSegment(const Eigen::Matrix4d& PV, const Eigen::Vector4i& v
 	float viewportf[] = { (float)viewportDims(0), (float)viewportDims(1), (float)viewportDims(2), (float)viewportDims(3) };
 	Eigen::Matrix4d sceneView = PV * MakeTransScaled();
 	ProjectMesh& mesh = *GetProjectMeshByIndex(bezierCurvePlane);
-	Eigen::Matrix4d meshView = sceneView * mesh.MakeTransScaled();
+	Eigen::Matrix4d meshView = sceneView * MakeMeshTransScaled(bezierCurvePlane);
 	Eigen::Vector3d sourcePointScene, dirToScene;
 	ProjectScreenCoordToScene(x, y, viewportf, meshView.inverse(), sourcePointScene, dirToScene);
 	double distanceToZ = -sourcePointScene(2);
@@ -562,6 +578,8 @@ bool Project::EnterBezierMode() {
 		currentSelectedBezierSegment = -1;
 		SetControlPointsPosition();
 		DrawBezierCurves();
+		igl::opengl::Camera& bezierCamera = renderer->GetCamera(editBezierCameraIndex);
+		bezierCamera.SetPosition(Eigen::Vector3d(0, 0, 10));
 		return true;
 	}
 	else {
@@ -612,7 +630,7 @@ bool Project::AddPickedShapes
 		Eigen::Vector4d centerPos = posMatrix * Eigen::Vector4d(0, 0, 0, 1);
 		double xpix = (1 + centerPos.x() / centerPos.z()) * viewport.z() / 2;
 		double ypix = (1 + centerPos.y() / centerPos.z()) * viewport.w() / 2;
-		if (ShouldRenderViewerData(mesh, sectionIndex, layerIndex) && mesh.IsPickable() && xpix < right && xpix > left && ypix < bottom && ypix > up)
+		if (ShouldRenderViewerData(mesh, sectionIndex, layerIndex, i) && mesh.IsPickable() && xpix < right && xpix > left && ypix < bottom && ypix > up)
 		{
 			pShapes.push_back(i);
 			if (mesh.DrawOutline())
@@ -632,6 +650,13 @@ bool Project::AddPickedShapes
 
 void Project::WhenRotate(const Eigen::Matrix4d& preMat, float dx, float dy)
 {
+	ProjectMesh& mesh = *GetProjectMeshByIndex(selected_data_index);
+	if (renderer->GetCurrentSection().IsRotationAllowed() && animationDirectionMode && mesh.AllowAnimations()) {
+		AnimatedMesh* animatedMesh = dynamic_cast<AnimatedMesh*>(const_cast<igl::opengl::ViewerData*>
+			(data()));
+		animatedMesh->RotateDirection(preMat, dx, dy);
+		return;
+	}
 	Eigen::Vector4d xRotation = preMat.transpose() * Eigen::Vector4d(0, 1, 0, 0);
 	Eigen::Vector4d yRotation = preMat.transpose() * Eigen::Vector4d(1, 0, 0, 0);
 	if (renderer->GetCurrentSection().IsRotationAllowed()) {
@@ -673,7 +698,7 @@ void Project::TranslateCamera(double dx, double dy, double dz) {
 	int cameraIndex = section.GetCamera();
 	if (cameraIndex == editBezierCameraIndex) {
 		igl::opengl::Camera& camera = renderer->GetCamera(cameraIndex);
-		double currentTranslation = camera.MakeTransScaled().col(3).z();
+		double currentTranslation = MakeCameraTransScaled(cameraIndex).col(3).z();
 		dz = std::max(1 - currentTranslation, dz);
 	}
 	MoveCamera([dx, dy, dz](Movable& movable)
@@ -745,4 +770,190 @@ void Project::SetControlPointsPosition() {
 		controlPointMesh->SetPosition(currentEditedMesh->GetControlPoint(currentSelectedBezierSegment, controlPointMesh->GetPointNumber()));
 		controlPointMesh->UnHide();
 	}
+}
+
+
+void Project::DrawShape
+(
+	size_t shapeIndex, int shaderIndx,
+	const Eigen::Matrix4f& Normal, const Eigen::Matrix4f& Proj, const Eigen::Matrix4f& View,
+	int sectionIndex, int layerIndex,
+	unsigned int flgs, unsigned int property_id
+)
+{
+	ProjectMesh& shape = *GetProjectMeshByIndex(shapeIndex);
+	if (ShouldRenderViewerData(shape, sectionIndex, layerIndex, shapeIndex) || 
+		(sectionIndex == editBezierSection && layerIndex == renderer->GetSection(editBezierSection).GetSceneLayerIndex() && shapeIndex == GetCurrentBezierMeshIndex()))
+	{
+		Eigen::Matrix4f Model = MakeMeshTransScale(shapeIndex);
+		if (sectionIndex == editBezierSection && shapeIndex == currentBezierMeshIndex) {
+			Model.col(3) = Eigen::Vector3f::Zero().homogeneous();
+			AnimatedMesh* animatedMesh = dynamic_cast<AnimatedMesh*>(const_cast<igl::opengl::ViewerData*>
+				(data_list[shapeIndex]));
+			Model *= animatedMesh->GetAnimationDirection().cast<float>();
+			Model.transposeInPlace();
+			Eigen::Vector3d startingCurvePoint = GetCurrentBezierMesh()->GetPoint(0.0);
+			Model.col(3) = startingCurvePoint.cast<float>().homogeneous();
+		}
+		if (!shape.IsStatic())
+		{
+			Model = Normal * GetPriviousTrans(View.cast<double>(), shapeIndex).cast<float>() * Model;
+		}
+		else if (parents[shapeIndex] == -2)
+		{
+			Model = View.inverse() * Model;
+		}
+		if (flgs & 32)
+		{
+			if (flgs & 2048) {
+				glStencilFunc(GL_ALWAYS, (int)shapeIndex + 1, 0xFF);
+			}
+			else if (flgs & 32768) {
+				glStencilFunc(GL_NOTEQUAL, (int)shapeIndex + 1, 0xFF);
+			}
+		}
+		if (!(flgs & 65536))
+		{
+			Update(Proj, View, Model, shape.GetShader(), shapeIndex);
+			// Draw fill
+			if (shape.show_faces & property_id)
+				shape.Draw(shaders[shape.GetShader()], true);
+			if (shape.show_lines & property_id)
+			{
+				glLineWidth(shape.line_width);
+				shape.Draw(shaders[shape.GetShader()], false);
+			}
+			// overlay draws
+			if ((shape.show_overlay & property_id) ||
+				(shape.AllowAnimations() && animationDirectionMode && sectionIndex != editBezierSection))
+			{
+				//TODO
+				if (shape.show_overlay_depth & property_id || true)
+					glEnable(GL_DEPTH_TEST);
+				else
+					glDisable(GL_DEPTH_TEST);
+				if (shape.lines.rows() > 0)
+				{					
+					if (shape.AllowAnimations() && animationDirectionMode && sectionIndex != editBezierSection) {
+						AnimatedMesh* animatedMesh = dynamic_cast<AnimatedMesh*>(const_cast<igl::opengl::ViewerData*>
+							(data_list[shapeIndex]));
+						Eigen::Matrix4f noScale = Normal * GetPriviousTrans(View.cast<double>(), shapeIndex).cast<float>() * MakeMeshTrans(shapeIndex);
+						//noScale.diagonal().head(3) = Eigen::Vector3f::Ones();
+						Update_overlay(Proj, View, noScale * animatedMesh->GetAnimationDirection().cast<float>(), shapeIndex, false);
+					}
+					else {
+						Update_overlay(Proj, View, Model, shapeIndex, false);
+					}
+					glEnable(GL_LINE_SMOOTH);
+					shape.Draw_overlay(overlay_shader, false);
+				}
+				if (shape.points.rows() > 0)
+				{
+					Update_overlay(Proj, View, Model, shapeIndex, true);
+					shape.Draw_overlay_pints(overlay_point_shader, false);
+				}
+				glEnable(GL_DEPTH_TEST);
+			}
+		}
+		else
+		{ //picking
+			// Changed: replaced hardcoded 0 with the draw shader
+			if (flgs & 16384)
+			{   //stencil
+				Eigen::Affine3f scale_mat = Eigen::Affine3f::Identity();
+				scale_mat.scale(Eigen::Vector3f(1.1f, 1.1f, 1.1f));
+				Update(Proj, View, Model * scale_mat.matrix(), shaderIndx, shapeIndex);
+			}
+			else
+			{
+				Update(Proj, View, Model, shaderIndx, shapeIndex);
+			}
+			shape.Draw(shaders[shaderIndx], true);
+		}
+	}
+}
+
+
+void Project::ClearPickedShapes(const std::vector<std::pair<int, int>>& stencilLayers)
+{
+	for (int pShape : pShapes)
+	{
+		data_list[pShape]->RemoveSectionLayers(stencilLayers);
+	}
+	selected_data_index = 0;
+	pShapes.clear();
+}
+
+std::map<int, std::string> Project::GetAnimationCamerasNames(){
+	std::map<int, std::string> toRet;
+	for (int i = 0; i < renderer->CamerasCount(); i++) {
+		if (camerasToMesh.find(i) != camerasToMesh.end()) {
+			toRet.insert({ i, "C" + std::to_string(i) });
+		}
+	}
+	return toRet;
+}
+
+Eigen::Matrix4d Project::MakeCameraTransScaled(int cameraIndex) {
+	if (camerasToMesh.find(cameraIndex) != camerasToMesh.end()) {
+		return MakeMeshTransScaled(camerasToMesh[cameraIndex]);
+	}
+	return renderer->GetCamera(cameraIndex).MakeTransScaled();
+}
+Eigen::Matrix4d Project::MakeCameraTransd(int cameraIndex) {
+	if (camerasToMesh.find(cameraIndex) != camerasToMesh.end()) {
+		return MakeMeshTransd(camerasToMesh[cameraIndex]);
+	}
+	return renderer->GetCamera(cameraIndex).MakeTransd();
+}
+Eigen::Matrix4f Project::MakeCameraTransScale(int cameraIndex) {
+	if (camerasToMesh.find(cameraIndex) != camerasToMesh.end()) {
+		return MakeMeshTransScale(camerasToMesh[cameraIndex]);
+	}
+	return renderer->GetCamera(cameraIndex).MakeTransScale();
+}
+Eigen::Matrix4f Project::MakeCameraTrans(int cameraIndex) {
+	if (camerasToMesh.find(cameraIndex) != camerasToMesh.end()) {
+		return MakeMeshTrans(camerasToMesh[cameraIndex]);
+	}
+	return renderer->GetCamera(cameraIndex).MakeTransd().cast<float>();
+}
+Eigen::Vector3d Project::GetCameraPosition(int cameraIndex) {
+	if (camerasToMesh.find(cameraIndex) != camerasToMesh.end()) {
+		return GetMeshPosition(camerasToMesh[cameraIndex]);
+	}
+	return renderer->GetCamera(cameraIndex).GetPosition();
+}
+Eigen::Matrix3d Project::GetCameraLinear(int cameraIndex) {
+	if (camerasToMesh.find(cameraIndex) != camerasToMesh.end()) {
+		return GetMeshLinear(camerasToMesh[cameraIndex]);
+	}
+	return renderer->GetCamera(cameraIndex).GetLinear();
+}
+Eigen::Matrix4d Project::MakeMeshTransScaled(int meshIndex) {
+	return GetProjectMeshByIndex(meshIndex)->MakeAnimatedTransScaled(currentTime);
+}
+Eigen::Matrix4d Project::MakeMeshTransd(int meshIndex) {
+	return GetProjectMeshByIndex(meshIndex)->MakeAnimatedTransd(currentTime);
+}
+Eigen::Matrix4f Project::MakeMeshTransScale(int meshIndex) {
+	return GetProjectMeshByIndex(meshIndex)->MakeAnimatedTransScale(currentTime);
+}
+Eigen::Matrix4f Project::MakeMeshTrans(int meshIndex) {
+	return GetProjectMeshByIndex(meshIndex)->MakeAnimatedTrans(currentTime);
+}
+Eigen::Vector3d Project::GetMeshPosition(int meshIndex) {
+	return GetProjectMeshByIndex(meshIndex)->GetAnimatedPosition(currentTime);
+}
+Eigen::Matrix3d Project::GetMeshLinear(int meshIndex) {
+	return GetProjectMeshByIndex(meshIndex)->GetAnimatedLinear(currentTime);
+}
+
+double Project::CalcAnimationTime() {
+	double currentMaxTime = 0.0;
+	for (int i = 0; i < (int)data_list.size(); i++) {
+		ProjectMesh* projectMesh = GetProjectMeshByIndex(i);
+		currentMaxTime = std::max(currentMaxTime, projectMesh->CalcAnimationTime());
+	}
+	return currentMaxTime;
 }

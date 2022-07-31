@@ -104,7 +104,8 @@ public:
 
   IGL_INLINE void draw_labels_window(Renderer* rndr, igl::opengl::glfw::Viewer& viewer, std::vector<WindowSection*>& sections);
 
-  IGL_INLINE void draw_labels(const igl::opengl::ViewerData &data, WindowSection& section, Eigen::Matrix4d Proj,
+  IGL_INLINE void draw_labels(Project& project, 
+      const igl::opengl::ViewerData &data, WindowSection& section, Eigen::Matrix4d Proj,
       Eigen::Matrix4d View);
 
   IGL_INLINE void draw_text(
