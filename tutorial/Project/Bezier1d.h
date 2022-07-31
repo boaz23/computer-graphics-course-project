@@ -217,11 +217,12 @@ private:
     {
         pcr_vector T{};
         t_t e = 1.0;
-        for (auto i = static_cast<t_index_signed>(lastControlPointIndex); i >= 0; --i)
+        for (t_index i = lastControlPointIndex; i > 0; --i)
         {
             T(i) = e;
             e *= t;
         }
+        T(0) = e;
         return T;
     }
 

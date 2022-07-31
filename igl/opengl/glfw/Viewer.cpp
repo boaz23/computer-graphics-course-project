@@ -719,8 +719,8 @@ IGL_INLINE bool
             }
             else
             {
-                double dy = yrel * movCoeff;
-                Eigen::Matrix4d preMat = cameraMat * scnMat;
+                double dy = -yrel * movCoeff;
+                Eigen::Matrix4d preMat = scnMat * cameraMat.inverse();
                 for (int pShape : pShapes)
                 {
                     selected_data_index = pShape;
